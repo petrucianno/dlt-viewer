@@ -157,7 +157,7 @@ void SettingsDialog::assertSettingsVersion()
         return; // The settings were empty already
     }
 
-   if(major > QString(PACKAGE_MAJOR_VERSION).toInt() || minor > QString(PACKAGE_MINOR_VERSION).toInt())
+   if(major > QString("%1").arg(PACKAGE_MAJOR_VERSION).toInt() || minor > QString("%1").arg(PACKAGE_MINOR_VERSION).toInt())
     {
         QString msg;
         msg.append("The application version has changed ! The settings file config.ini might be incompatible.\n");
