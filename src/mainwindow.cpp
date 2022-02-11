@@ -90,7 +90,8 @@ MainWindow::MainWindow(QWidget *parent) :
     timer(this),
     qcontrol(this),
     pulseButtonColor(255, 40, 40),
-    isSearchOngoing(false)
+    isSearchOngoing(false),
+    searchInFilesDialog(new SearchInFilesDialog(this))
 {
     settings = QDltSettingsManager::getInstance();
     ui->setupUi(this);
@@ -483,6 +484,9 @@ void MainWindow::initSignalConnections()
         ui->exploreView->scrollTo(
                     proxyModel->mapFromSource(fsModel->index(recentFiles[0])));
     });
+    /* Connect search result request for opening a file */
+    connect(searchInFilesDialog, &SearchInFilesDialog::openDltFiles, this, &MainWindow::openDltFile);
+    //connect(this, &MainWindow::dltFileLoaded, searchInFilesDialog, &SearchInFilesDialog::dltFilesOpened);
 }
 
 void MainWindow::initSearchTable()
@@ -6714,14 +6718,18 @@ void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
     else
     {
         /* TODO:
-                search form, search threads
+                [done] search form,
+                [TODO]  search form connections
+                [done] search threads
         */
         action = new QAction("&Find in files", this);
-        action->setEnabled(false);
+
         connect(action, &QAction::triggered, this, [this](){
             auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
             auto path  = getPathFromExplorerViewIndexModel(index);
-            qDebug() << "Find in files - triggered" << path;
+
+            searchInFilesDialog->setFolder(path);
+            searchInFilesDialog->show();
         });
         menu.addAction(action);
 
@@ -6746,9 +6754,6 @@ void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
         auto path  = getPathFromExplorerViewIndexModel(index);
 #ifdef WIN32
         QProcess process;
-//        process.setProgram("explorer.exe");
-//        process.setArguments({QString("%1\"%2\"").arg("/select,", QDir::toNativeSeparators(path))});
-//        process.startDetached();
         process.startDetached(QString("explorer.exe /select,%1")
                                     .arg(QDir::toNativeSeparators(path)));
 #else
