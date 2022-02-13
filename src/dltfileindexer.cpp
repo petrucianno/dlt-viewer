@@ -17,17 +17,19 @@ extern "C" {
     #include "dlt_user.h"
 }
 
-DltFileIndexerKey::DltFileIndexerKey(time_t time, unsigned int microseconds, int index)
+DltFileIndexerKey::DltFileIndexerKey(time_t time, unsigned int microseconds, int index, const QSharedPointer<QDltMsg> &msg)
     : timestamp(0)
+    , msg(msg)
 {
     this->time = time;
     this->microseconds = microseconds;
     this->index = index;
 }
 
-DltFileIndexerKey::DltFileIndexerKey(unsigned int timestamp, int index)
+DltFileIndexerKey::DltFileIndexerKey(unsigned int timestamp, int index, const QSharedPointer<QDltMsg> &msg)
     : time(0)
     , microseconds(0)
+    , msg(msg)
 {
     this->timestamp = timestamp;
     this->index = index;
@@ -460,7 +462,9 @@ bool DltFileIndexer::indexFilter(QStringList filenames)
 
     // use sorted values if sort by time enabled
     if(sortByTimeEnabled || sortByTimestampEnabled)
+    {
         indexFilterList = QVector<qint64>::fromList(indexFilterListSorted.values());
+    }
 
     // write filter index if enabled
     if(filterCacheEnabled)

@@ -341,8 +341,13 @@ void MainWindow::initView()
     ui->exploreView->hideColumn(2);
     ui->exploreView->hideColumn(3);
 
+    ui->exploreView->setAutoExpandDelay(10);
+
     if (recentFiles.size() > 0)
     {
+        ui->exploreView->expand(
+                    sortProxyModel->mapFromSource(model->index(recentFiles[0])));
+
         ui->exploreView->scrollTo(
                     sortProxyModel->mapFromSource(model->index(recentFiles[0])));
     }
@@ -478,6 +483,9 @@ void MainWindow::initSignalConnections()
     connect(this, &MainWindow::dltFileLoaded, this, [this](const QStringList& paths){
         QSortFilterProxyModel*   proxyModel = reinterpret_cast<QSortFilterProxyModel*>(ui->exploreView->model());
         QFileSystemModel*        fsModel    = reinterpret_cast<QFileSystemModel*>(proxyModel->sourceModel());
+
+        ui->exploreView->expand(
+                    proxyModel->mapFromSource(fsModel->index(recentFiles[0])));
         ui->exploreView->scrollTo(
                     proxyModel->mapFromSource(fsModel->index(recentFiles[0])));
     });
@@ -1092,7 +1100,7 @@ bool MainWindow::openDltFile(QStringList fileNames)
     if (ret)
         emit dltFileLoaded(fileNames);
 
-    //qDebug() << "Open files done" << __FILE__ << __LINE__;
+    qDebug() << "Open files done" << __FILE__ << __LINE__ << ret;
     return ret;
 }
 
@@ -6712,6 +6720,7 @@ void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
     }
     else
     {
+#if 0
         /* TODO:
                 search form, search threads
         */
@@ -6723,7 +6732,37 @@ void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
             qDebug() << "Find in files - triggered" << path;
         });
         menu.addAction(action);
+#endif
+        action = new QAction("Open all files", this);
+        //action->setEnabled(false);
+        connect(action, &QAction::triggered, this, [this](){
+            auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
+            auto path  = getPathFromExplorerViewIndexModel(index);
 
+            QStringList  files;
+            QDirIterator it_sh(path, QStringList() << "*.dlt", QDir::Files, QDirIterator::Subdirectories);
+
+            while (it_sh.hasNext())
+            {
+                files.append(it_sh.next());
+            }
+
+            auto start = QDateTime::currentMSecsSinceEpoch();
+            openDltFile(files); outputfileIsTemporary = true;
+
+            std::unique_ptr<QMetaObject::Connection> pconn{new QMetaObject::Connection};
+            QMetaObject::Connection &conn = *pconn;
+            conn = QObject::connect(dltIndexer, &DltFileIndexer::finishIndex,
+                                [this, pconn = std::move(pconn), &conn, start, numFiles = files.size()](){
+                QObject::disconnect(conn);
+
+                auto durationMs = QDateTime::currentMSecsSinceEpoch() - start;
+                qDebug () << QString("%1 files loaded in %2 ms").arg(numFiles).arg(durationMs);
+                // ...
+                /* Trigger sorting of messages by time */
+            });
+        });
+        menu.addAction(action);
     }
     menu.addSeparator();
 

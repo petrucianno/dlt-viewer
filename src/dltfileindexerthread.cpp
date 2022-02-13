@@ -43,11 +43,31 @@ void DltFileIndexerThread::requestStop()
     msgQueue.enqueueStopRequest();
 }
 
+#include <QString>
+#include <QDebug>
+
 void DltFileIndexerThread::run()
 {
     QPair<QSharedPointer<QDltMsg>, int> msgPair;
     while(msgQueue.dequeue(msgPair))
         processMessage(msgPair.first, msgPair.second);
+
+    //here the sorted list is checked for duplicate messages
+    QByteArray prev_buf;
+    auto keys = indexFilterListSorted->keys();
+    for (auto &key : keys)
+    {
+        QByteArray buf;
+        key.msg.data()->getMsg(buf);
+
+        if (buf == prev_buf)
+        {
+            indexFilterListSorted->remove(key);
+        }
+        prev_buf = buf;
+    }
+#if 0
+#endif
 }
 
 void DltFileIndexerThread::processMessage(QSharedPointer<QDltMsg> &msg, int index)
@@ -128,11 +148,11 @@ void DltFileIndexerThread::processMessage(QSharedPointer<QDltMsg> &msg, int inde
     {
         if(sortByTimeEnabled)
          {
-            indexFilterListSorted->insert(DltFileIndexerKey(msg->getTime(), msg->getMicroseconds(), index), index);
+            indexFilterListSorted->insert(DltFileIndexerKey(msg->getTime(), msg->getMicroseconds(), index, QSharedPointer<QDltMsg>(msg)), index);
          }
         else if(sortByTimestampEnabled)
          {
-            indexFilterListSorted->insert(DltFileIndexerKey(msg->getTimestamp(), index), index);
+            indexFilterListSorted->insert(DltFileIndexerKey(msg->getTimestamp(), index, QSharedPointer<QDltMsg>(msg)), index);
          }
         else
          {

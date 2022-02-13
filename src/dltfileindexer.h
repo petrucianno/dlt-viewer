@@ -16,11 +16,12 @@
 class DltFileIndexerKey
 {
 public:
-    DltFileIndexerKey(time_t time, unsigned int microseconds, int index);
-    DltFileIndexerKey(unsigned int timestamp, int index);
+    DltFileIndexerKey(time_t time, unsigned int microseconds, int index, const QSharedPointer<QDltMsg> &msg = nullptr);
+    DltFileIndexerKey(unsigned int timestamp, int index, const QSharedPointer<QDltMsg> &msg = nullptr);
 
     friend bool operator< (const DltFileIndexerKey &key1, const DltFileIndexerKey &key2);
 
+    const QSharedPointer<QDltMsg> msg;
 private:
     time_t time;
     unsigned int microseconds;
