@@ -16,11 +16,12 @@
 class DltFileIndexerKey
 {
 public:
-    DltFileIndexerKey(time_t time, unsigned int microseconds, int index);
-    DltFileIndexerKey(unsigned int timestamp, int index);
+    DltFileIndexerKey(time_t time, unsigned int microseconds, int index, const QSharedPointer<QDltMsg> &msg = nullptr);
+    DltFileIndexerKey(unsigned int timestamp, int index, const QSharedPointer<QDltMsg> &msg = nullptr);
 
     friend bool operator< (const DltFileIndexerKey &key1, const DltFileIndexerKey &key2);
 
+    const QSharedPointer<QDltMsg> msg;
 private:
     time_t time;
     unsigned int microseconds;
@@ -119,8 +120,8 @@ public:
     bool getMultithreaded() { return multithreaded; }
 
     // get and set filter cache
-    void setFilterCache(QString path) { filterCache = path; }
-    QString getFilterCache() { return filterCache; }
+    void setFilterCacheEnabled(bool enabled) { filterCacheEnabled = enabled; }
+    bool getFilterCacheEnabled() { return filterCacheEnabled; }
 
     // get index of all messages
     QVector<qint64> getIndexAll() { return indexAllList; }
@@ -180,8 +181,8 @@ private:
     bool sortByTimeEnabled;
     bool sortByTimestampEnabled;
 
-    // filter cache path
-    QString filterCache;
+    // filter cache enabled
+    bool filterCacheEnabled;
 
     // file errors
     qint64 errors_in_file;

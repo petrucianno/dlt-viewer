@@ -8,6 +8,8 @@
 #include <QTime>
 #include <QCryptographicHash>
 #include <QMutexLocker>
+#include <QDir>
+#include <QFileInfo>
 
 
 extern "C" {
@@ -15,17 +17,19 @@ extern "C" {
     #include "dlt_user.h"
 }
 
-DltFileIndexerKey::DltFileIndexerKey(time_t time, unsigned int microseconds, int index)
+DltFileIndexerKey::DltFileIndexerKey(time_t time, unsigned int microseconds, int index, const QSharedPointer<QDltMsg> &msg)
     : timestamp(0)
+    , msg(msg)
 {
     this->time = time;
     this->microseconds = microseconds;
     this->index = index;
 }
 
-DltFileIndexerKey::DltFileIndexerKey(unsigned int timestamp, int index)
+DltFileIndexerKey::DltFileIndexerKey(unsigned int timestamp, int index, const QSharedPointer<QDltMsg> &msg)
     : time(0)
     , microseconds(0)
+    , msg(msg)
 {
     this->timestamp = timestamp;
     this->index = index;
@@ -87,7 +91,7 @@ bool DltFileIndexer::index(int num)
     // time.start();
 
     // load filter index if enabled
-    if(!filterCache.isEmpty() && loadIndexCache(dltFile->getFileName(num)))
+    if(filterCacheEnabled && loadIndexCache(dltFile->getFileName(num)))
     {
         // loading index from filter is succesful
         qDebug() << "Successfully loaded index cache for file" << dltFile->getFileName(num);// << __LINE__;
@@ -312,10 +316,10 @@ bool DltFileIndexer::index(int num)
     }
 
     // write index if enabled
-    if(false == filterCache.isEmpty())
+    if(filterCacheEnabled)
     {
         saveIndexCache(dltFile->getFileName(num));
-        qDebug() << "Saved index cache for file" << dltFile->getFileName(num) << filterCache;
+        qDebug() << "Saved index cache for file" << dltFile->getFileName(num);
     }
     emit(progress(pos));
 
@@ -349,7 +353,7 @@ bool DltFileIndexer::indexFilter(QStringList filenames)
     getLogInfoList.clear();
 
     // load filter index, if enabled and not an initial loading of file
-    if(!filterCache.isEmpty() && mode != modeIndexAndFilter && loadFilterIndexCache(filterList,indexFilterList,filenames))
+    if(filterCacheEnabled && mode != modeIndexAndFilter && loadFilterIndexCache(filterList,indexFilterList,filenames))
     {
         // loading filter index from filter is succesful
         qDebug() << "Loaded filter index cache for files" << filenames;
@@ -458,10 +462,12 @@ bool DltFileIndexer::indexFilter(QStringList filenames)
 
     // use sorted values if sort by time enabled
     if(sortByTimeEnabled || sortByTimestampEnabled)
+    {
         indexFilterList = QVector<qint64>::fromList(indexFilterListSorted.values());
+    }
 
     // write filter index if enabled
-    if(!filterCache.isEmpty())
+    if(filterCacheEnabled)
     {
         saveFilterIndexCache(filterList, indexFilterList, filenames);
         qDebug() << "Saved filter index cache for files" << filenames;
@@ -562,7 +568,7 @@ bool DltFileIndexer::indexDefaultFilter()
         filterIndex->setAllIndexSize(dltFile->size());
 
         // write filter index if enabled
-        if(!filterCache.isEmpty())
+        if(filterCacheEnabled)
             saveFilterIndexCache(*filterList, filterIndex->indexFilter, QStringList(dltFile->getFileName()));
     }
 
@@ -647,7 +653,7 @@ void DltFileIndexer::run()
     {
         QStringList filenames;
         for(int num=0;num<dltFile->getNumberOfFiles();num++)
-            filenames.append(QFileInfo(dltFile->getFileName(num)).fileName());
+            filenames.append(dltFile->getFileName(num));
         if((mode != modeNone) && !indexFilter(filenames))
         {
             // error
@@ -696,14 +702,19 @@ bool DltFileIndexer::loadIndexCache(QString filename)
     QString filenameCache;
 
     // check if caching is enabled
-    if(filterCache.isEmpty())
+    if(!filterCacheEnabled)
         return false;
 
     // get the filename for the cache file
     filenameCache = filenameIndexCache(filename);
 
-    // load the cache file
-    if(!loadIndex(filterCache + "/" +filenameCache,indexAllList))
+    // load the cache file in a subdirectory index
+    QFileInfo info(filename);
+    QDir dir(info.dir().path()+"/index");
+    if (!dir.exists())
+        dir.mkpath(".");
+    qDebug() << "Index Cache filename" << info.dir().path() + "/index/" +filenameCache;
+    if(!loadIndex(info.dir().path() + "/index/" +filenameCache,indexAllList))
     {
         // loading cache file failed
         return false;
@@ -717,14 +728,19 @@ bool DltFileIndexer::saveIndexCache(QString filename)
     QString filenameCache;
 
     // check if caching is enabled
-    if(filterCache.isEmpty())
+    if(!filterCacheEnabled)
         return false;
 
     // get the filename for the cache file
     filenameCache = filenameIndexCache(filename);
 
-    // save the cache file
-    if(!saveIndex(filterCache + "/" +filenameCache,indexAllList))
+    // save the cache file in a sudirectory index
+    QFileInfo info(filename);
+    QDir dir(info.dir().path()+"/index");
+    if (!dir.exists())
+        dir.mkpath(".");
+    qDebug() << "Index Cache filename" << info.dir().path() + "/index/" +filenameCache;
+    if(!saveIndex(info.dir().path() + "/index/" +filenameCache,indexAllList))
     {
         // saving cache file failed
         return false;
@@ -764,21 +780,24 @@ bool DltFileIndexer::loadFilterIndexCache(QDltFilterList &filterList, QVector<qi
     QString filenameCache;
 
     // check if caching is enabled
-    if(filterCache.isEmpty())
+    if(!filterCacheEnabled)
         return false;
 
     // get the filename for the cache file
     filenameCache = filenameFilterIndexCache(filterList,filenames);
 
     // load the cache file
-    //qDebug() << "loadIndex" << __LINE__;
-    if(loadIndex(filterCache + "/" +filenameCache,index))
+    QFileInfo info(filenames[0]);
+    QDir dir(info.dir().path()+"/index");
+    if (!dir.exists())
+        dir.mkpath(".");
+    if(loadIndex(info.dir().path() + "/index/" +filenameCache,index))
     {
-        qDebug() << "loadIndex" << filterCache + "/" +filenameCache << "success";
+        qDebug() << "loadIndex" << info.dir().path() + "/index/" +filenameCache << "success";
     }
     else
     {
-        qDebug() << "loadIndex" << filterCache + "/" +filenameCache << "failed";
+        qDebug() << "loadIndex" << info.dir().path() + "/index/" +filenameCache << "failed";
         return false;
     }
 
@@ -790,14 +809,19 @@ bool DltFileIndexer::saveFilterIndexCache(QDltFilterList &filterList, QVector<qi
     QString filename;
 
     // check if caching is enabled
-    if(filterCache.isEmpty())
+    if(!filterCacheEnabled)
         return false;
 
     // get the filename for the cache file
     filename = filenameFilterIndexCache(filterList,filenames);
 
     // save the cache file
-    if(!saveIndex(filterCache + "/" +filename,index))
+    QFileInfo info(filenames[0]);
+    QDir dir(info.dir().path()+"/index");
+    if (!dir.exists())
+        dir.mkpath(".");
+    qDebug() << "Filter Index Cache filename" << info.dir().path() + "/index/" +filename;
+    if(!saveIndex(info.dir().path() + "/index/" +filename,index))
     {
         // saving of cache file failed
         return false;
