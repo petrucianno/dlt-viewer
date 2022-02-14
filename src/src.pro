@@ -127,6 +127,7 @@ SOURCES += main.cpp \
     contextdialog.cpp \
     filterdialog.cpp \
     plugindialog.cpp \
+    searchinfilesdialog.cpp \
     settingsdialog.cpp \
     injectiondialog.cpp \
     searchdialog.cpp \
@@ -150,6 +151,7 @@ SOURCES += main.cpp \
     dltfileindexerthread.cpp \
     dltfileindexerdefaultfilterthread.cpp \
     mcudpsocket.cpp \
+    dltmessagefinder.cpp \
 
 # Show these headers in the project
 HEADERS += mainwindow.h \
@@ -159,6 +161,7 @@ HEADERS += mainwindow.h \
     contextdialog.h \
     filterdialog.h \
     plugindialog.h \
+    searchinfilesdialog.h \
     settingsdialog.h \
     injectiondialog.h \
     searchdialog.h \
@@ -183,6 +186,7 @@ HEADERS += mainwindow.h \
     dltfileindexerthread.h \
     dltfileindexerdefaultfilterthread.h \
     mcudpsocket.h \
+    dltmessagefinder.h \
     regex_search_replace.h
 
 # Compile these UI files
@@ -192,6 +196,7 @@ FORMS += mainwindow.ui \
     contextdialog.ui \
     filterdialog.ui \
     plugindialog.ui \
+    searchinfilesdialog.ui \
     settingsdialog.ui \
     injectiondialog.ui \
     searchdialog.ui \
