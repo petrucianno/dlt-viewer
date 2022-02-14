@@ -177,7 +177,6 @@ MainWindow::~MainWindow()
         }
     }
 
-
     if(( settings->appendDateTime == 1) && (outputfile.size() != 0))
     {
         // get new filename
