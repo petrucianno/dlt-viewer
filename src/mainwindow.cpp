@@ -486,8 +486,10 @@ void MainWindow::initSignalConnections()
                     proxyModel->mapFromSource(fsModel->index(recentFiles[0])));
     });
     /* Connect search result request for opening a file */
-    connect(searchInFilesDialog, &SearchInFilesDialog::openDltFiles, this, &MainWindow::openDltFile);
-    //connect(this, &MainWindow::dltFileLoaded, searchInFilesDialog, &SearchInFilesDialog::dltFilesOpened);
+    connect(searchInFilesDialog, &SearchInFilesDialog::openDltFiles, this, [this](const QStringList& files){
+        openDltFile(files);
+        outputfileIsTemporary = false;
+    });
 }
 
 void MainWindow::initSearchTable()
