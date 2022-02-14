@@ -41,6 +41,7 @@
 #include "workingdirectory.h"
 #include "exporterdialog.h"
 #include "searchtablemodel.h"
+#include "searchinfilesdialog.h"
 #include "ui_mainwindow.h"
 
 
@@ -380,7 +381,8 @@ private:
 
     /* Get path from explorerView model index */
     QString getPathFromExplorerViewIndexModel(const QModelIndex &proxyIndex);
-
+    /**/
+    SearchInFilesDialog *searchInFilesDialog;
 protected:
     void keyPressEvent ( QKeyEvent * event );
     void dragEnterEvent(QDragEnterEvent *event);

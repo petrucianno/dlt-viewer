@@ -16,7 +16,16 @@
 
 cmake_minimum_required (VERSION 3.15)
 
-project(dlt-viewer)
+include(scripts/windows/version.cmake)
+include(scripts/linux/version.cmake)
+
+project(dlt-viewer
+    VERSION ${DLT_PROJECT_VERSION_MAJOR}.${DLT_PROJECT_VERSION_MINOR}.${DLT_PROJECT_VERSION_PATCH}
+    DESCRIPTION "DLT Viewer")
+message(STATUS "DLT Viewer version: ${DLT_PROJECT_VERSION_MAJOR}.${DLT_PROJECT_VERSION_MINOR}.${DLT_PROJECT_VERSION_PATCH}-${DLT_VERSION_SUFFIX}")
+
+file(WRITE "${CMAKE_BINARY_DIR}/version.txt" "${DLT_PROJECT_VERSION_MAJOR}.${DLT_PROJECT_VERSION_MINOR}.${DLT_PROJECT_VERSION_PATCH}")
+file(WRITE "${CMAKE_BINARY_DIR}/full_version.txt" "${DLT_PROJECT_VERSION_MAJOR}.${DLT_PROJECT_VERSION_MINOR}.${DLT_PROJECT_VERSION_PATCH}-${DLT_VERSION_SUFFIX}")
 
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
     set(LINUX TRUE)
@@ -45,13 +54,8 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 get_target_property(DLT_QT5_LIBRARY_PATH Qt5::Core LOCATION)
 get_filename_component(DLT_QT5_LIB_DIR ${DLT_QT5_LIBRARY_PATH} DIRECTORY)
 
-if(NOT WIN32)
-    option(DLT_USE_QT_RPATH "Use RPATH for QT_LIBRARY_PATH to support non-standard QT install locations" ON)
-    if (DLT_USE_QT_RPATH)
-        # Add Qt to the RPATH, so that there is no need to set LD_LIBRARY_PATH at runtime if Qt is installed in a non-standard location
-        set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH};${DLT_QT5_LIB_DIR}")
-    endif()
-endif()
+# Add Qt to the RPATH, so that there is no need to set LD_LIBRARY_PATH at runtime if Qt is installed in a non-standard location
+option(DLT_USE_QT_RPATH "Use RPATH for QT_LIBRARY_PATH to support non-standard QT install locations" ON)
 
 # Injection of the GCC-specific compilation flags
 if(CMAKE_COMPILER_IS_GNUCXX)
@@ -64,6 +68,12 @@ add_compile_definitions(QT5)
 
 option(DLT_USE_STANDARD_INSTALLATION_LOCATION "Use standard GNU installation locations" OFF)
 if(NOT WIN32)
+    if(NOT DLT_APP_DIR_NAME)
+        set(DLT_APP_DIR_NAME "DLTViewer")
+        if(APPLE)
+            set(DLT_APP_DIR_NAME "DLTViewer.app")
+        endif()
+    endif()
     if(DLT_USE_STANDARD_INSTALLATION_LOCATION)
         include(GNUInstallDirs)
         set(DLT_PLUGIN_INSTALLATION_PATH "${CMAKE_INSTALL_FULL_LIBDIR}/dlt-viewer/plugins")
@@ -75,19 +85,22 @@ if(NOT WIN32)
             set(CMAKE_INSTALL_PREFIX "DLTViewer")
         endif()
         if(NOT DLT_PLUGIN_INSTALLATION_PATH)
-            set(DLT_PLUGIN_INSTALLATION_PATH "usr/bin/plugins")
+            set(DLT_PLUGIN_INSTALLATION_PATH "${DLT_APP_DIR_NAME}/usr/bin/plugins")
         endif()
         if(NOT DLT_RESOURCE_INSTALLATION_PATH)
-            set(DLT_RESOURCE_INSTALLATION_PATH "usr/share")
+            set(DLT_RESOURCE_INSTALLATION_PATH "${DLT_APP_DIR_NAME}/usr/share")
         endif()
         if(NOT DLT_EXECUTABLE_INSTALLATION_PATH)
-            set(DLT_EXECUTABLE_INSTALLATION_PATH "usr/bin")
+            set(DLT_EXECUTABLE_INSTALLATION_PATH "${DLT_APP_DIR_NAME}/usr/bin")
         endif()
         if(NOT DLT_LIBRARY_INSTALLATION_PATH)
-            set(DLT_LIBRARY_INSTALLATION_PATH "usr/lib")
+            set(DLT_LIBRARY_INSTALLATION_PATH "${DLT_APP_DIR_NAME}/usr/lib")
         endif()
     endif()
 else()
+    if(NOT DLT_APP_DIR_NAME)
+        set(DLT_APP_DIR_NAME "./")
+    endif()
     if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
         # AppData is a modern install location. No Admin rights required.
         file(TO_CMAKE_PATH "$ENV{LOCALAPPDATA}/Programs/dlt-viewer" CMAKE_INSTALL_PREFIX)
@@ -124,3 +137,8 @@ message(STATUS "\tCMAKE_BUILD_TYPE:             ${CMAKE_BUILD_TYPE}")
 message(STATUS "\tCMAKE_SYSTEM_PROCESSOR:       ${CMAKE_SYSTEM_PROCESSOR}")
 message(STATUS "\tCMAKE_SYSTEM_NAME:            ${CMAKE_SYSTEM_NAME}")
 message(STATUS "\tDLT_QT5_LIB_DIR:               ${DLT_QT5_LIB_DIR}\n")
+
+# Must be last
+include(scripts/windows/package.cmake)
+include(scripts/linux/package.cmake)
+include(scripts/darwin/package.cmake)

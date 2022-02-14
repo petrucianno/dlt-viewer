@@ -45,6 +45,7 @@
 #include <QFileSystemModel>
 #include <QSortFilterProxyModel>
 #include <QDesktopServices>
+#include <QProcess>
 
 /**
  * From QDlt.
@@ -89,8 +90,10 @@ MainWindow::MainWindow(QWidget *parent) :
     timer(this),
     qcontrol(this),
     pulseButtonColor(255, 40, 40),
-    isSearchOngoing(false)
+    isSearchOngoing(false),
+    searchInFilesDialog(new SearchInFilesDialog(this))
 {
+    dltIndexer = NULL;
     settings = QDltSettingsManager::getInstance();
     ui->setupUi(this);
     ui->enableConfigFrame->setVisible(false);
@@ -110,9 +113,6 @@ MainWindow::MainWindow(QWidget *parent) :
     initSignalConnections();
 
     initFileHandling();
-
-    // check and clear index cache if needed
-    settingsDlg->clearIndexCacheAfterDays();
 
     /* Command plugin */
     if(QDltOptManager::getInstance()->isPlugin())
@@ -342,6 +342,8 @@ void MainWindow::initView()
     ui->exploreView->hideColumn(2);
     ui->exploreView->hideColumn(3);
 
+    ui->exploreView->setAutoExpandDelay(10);
+
     /* Enable column sorting of config widget */
     ui->configWidget->sortByColumn(0, Qt::AscendingOrder); // column/order to sort by
     ui->configWidget->setSortingEnabled(true);             // should cause sort on add
@@ -473,6 +475,9 @@ void MainWindow::initSignalConnections()
     connect(this, &MainWindow::dltFileLoaded, this, [this](const QStringList& paths){
         QSortFilterProxyModel*   proxyModel = reinterpret_cast<QSortFilterProxyModel*>(ui->exploreView->model());
         QFileSystemModel*        fsModel    = reinterpret_cast<QFileSystemModel*>(proxyModel->sourceModel());
+
+        ui->exploreView->expand(
+                    proxyModel->mapFromSource(fsModel->index(recentFiles[0])));
         ui->exploreView->scrollTo(
                     proxyModel->mapFromSource(fsModel->index(recentFiles[0])));
     });
@@ -1087,8 +1092,74 @@ bool MainWindow::openDltFile(QStringList fileNames)
     if (ret)
         emit dltFileLoaded(fileNames);
 
-    //qDebug() << "Open files done" << __FILE__ << __LINE__;
+    qDebug() << "Open files done" << __FILE__ << __LINE__ << ret;
     return ret;
+}
+
+void MainWindow::appendDltFile(const QString &fileName)
+{
+    DltFile importfile;
+
+    dlt_file_init(&importfile,0);
+
+    QProgressDialog progress("Append log file", "Cancel Loading", 0, 100, this);
+    progress.setModal(true);
+    int num = 0;
+
+    /* open DLT log file with same filename as output file */
+    if (dlt_file_open(&importfile,fileName.toLatin1() ,0)<0)
+    {
+        return;
+    }
+
+    if (importfile.file_length <= 0) // This can happen
+    {
+        dlt_file_free(&importfile, 0);
+        return;
+    }
+
+    /* get number of files in DLT log file */
+    while (dlt_file_read(&importfile,0)>=0)
+    {
+        num++;
+        if ( 0 == (num%1000))
+        {
+            progress.setValue(
+                    static_cast<int>(static_cast<float>(importfile.file_position) * 100.0f
+                            / static_cast<float>(importfile.file_length)));
+        }
+        if (progress.wasCanceled())
+        {
+            dlt_file_free(&importfile,0);
+            return;
+        }
+    }
+
+    /* read DLT messages and append to current output file */
+    for(int pos = 0 ; pos<num ; pos++)
+    {
+        if ( 0 == (pos % 1000))
+        {
+            progress.setValue(
+                    static_cast<int>(static_cast<float>(pos) * 100.0f
+                                     / static_cast<float>(num)));
+        }
+        if (progress.wasCanceled())
+        {
+            dlt_file_free(&importfile,0);
+            reloadLogFile();
+            return;
+        }
+        dlt_file_message(&importfile,pos,0);
+        outputfile.write((char*)importfile.msg.headerbuffer,importfile.msg.headersize);
+        outputfile.write((char*)importfile.msg.databuffer,importfile.msg.datasize);
+    }
+    outputfile.flush();
+
+    dlt_file_free(&importfile,0);
+
+    /* reload log file */
+    reloadLogFile();
 }
 
 void MainWindow::on_action_menuFile_Import_DLT_Stream_triggered()
@@ -1193,72 +1264,6 @@ void MainWindow::on_action_menuFile_Append_DLT_File_triggered()
         return;
 
     appendDltFile(fileName);
-}
-
-void MainWindow::appendDltFile(const QString &fileName)
-{
-    DltFile importfile;
-
-    dlt_file_init(&importfile,0);
-
-    QProgressDialog progress("Append log file", "Cancel Loading", 0, 100, this);
-    progress.setModal(true);
-    int num = 0;
-
-    /* open DLT log file with same filename as output file */
-    if (dlt_file_open(&importfile,fileName.toLatin1() ,0)<0)
-    {
-        return;
-    }
-
-    if (importfile.file_length <= 0) // This can happen
-    {
-        dlt_file_free(&importfile, 0);
-        return;
-    }
-
-    /* get number of files in DLT log file */
-    while (dlt_file_read(&importfile,0)>=0)
-    {
-        num++;
-        if ( 0 == (num%1000))
-        {
-            progress.setValue(
-                    static_cast<int>(static_cast<float>(importfile.file_position) * 100.0f
-                            / static_cast<float>(importfile.file_length)));
-        }
-        if (progress.wasCanceled())
-        {
-            dlt_file_free(&importfile,0);
-            return;
-        }
-    }
-
-    /* read DLT messages and append to current output file */
-    for(int pos = 0 ; pos<num ; pos++)
-    {
-        if ( 0 == (pos % 1000))
-        {
-            progress.setValue(
-                    static_cast<int>(static_cast<float>(pos) * 100.0f
-                                     / static_cast<float>(num)));
-        }
-        if (progress.wasCanceled())
-        {
-            dlt_file_free(&importfile,0);
-            reloadLogFile();
-            return;
-        }
-        dlt_file_message(&importfile,pos,0);
-        outputfile.write((char*)importfile.msg.headerbuffer,importfile.msg.headersize);
-        outputfile.write((char*)importfile.msg.databuffer,importfile.msg.datasize);
-    }
-    outputfile.flush();
-
-    dlt_file_free(&importfile,0);
-
-    /* reload log file */
-    reloadLogFile();
 }
 
 void MainWindow::mark_unmark_lines()
@@ -1893,10 +1898,7 @@ void MainWindow::reloadLogFile(bool update, bool multithreaded)
     dltIndexer->setSortByTimeEnabled(QDltSettingsManager::getInstance()->value("startup/sortByTimeEnabled", false).toBool());
     dltIndexer->setSortByTimestampEnabled(QDltSettingsManager::getInstance()->value("startup/sortByTimestampEnabled", false).toBool());
     dltIndexer->setMultithreaded(multithreaded);
-    if(settings->filterCache)
-        dltIndexer->setFilterCache(settings->filterCacheName);
-    else
-        dltIndexer->setFilterCache(QString(""));
+    dltIndexer->setFilterCacheEnabled(settings->filterCache);
 
     // run through all viewer plugins
     // must be run in the UI thread, if some gui actions are performed
@@ -1993,6 +1995,10 @@ void MainWindow::applySettings()
     {
         draw_interval = 1000 / DEFAULT_REFRESH_RATE;
     }
+
+    // disable or enable filter cache
+    if(dltIndexer)
+        dltIndexer->setFilterCacheEnabled(settings->filterCache);
 }
 
 
@@ -6653,7 +6659,6 @@ void MainWindow::on_tableView_customContextMenuRequested(QPoint pos)
     menu.exec(globalPos);
 }
 
-
 void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
 {
     /* show custom pop menu for explorer */
@@ -6667,41 +6672,92 @@ void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
 
     if (is_file)
     {
-        action = new QAction("&Open", this);
+        action = new QAction("&Load", this);
          connect(action, &QAction::triggered, this, [this](){
              auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
              on_exploreView_activated(index);
          });
         menu.addAction(action);
 
-//        if (!path.toLower().endsWith(".dlp"))
-//        {
-//            action = new QAction("&Append", this);
-//            action->setEnabled(false);
-//            connect(action, &QAction::triggered, this, [this](){
-//                auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
-//                auto path  = getPathFromExplorerViewIndexModel(index);
-//                if (path.toLower().endsWith(".dlp"))
-//                    appendDltFile(path);
-//                else
-//                    ; // append dlf file
-//            });
-//            menu.addAction(action);
-//        }
+        if (!path.toLower().endsWith(".dlp"))
+        {
+            if (path.toLower().endsWith(".dlt"))
+            {
+                action = new QAction("&Open in new instance", this);
+                connect(action, &QAction::triggered, this, [this](){
+                    auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
+                    auto path = getPathFromExplorerViewIndexModel(index);
+                    QProcess process;
+                    process.setProgram(QCoreApplication::applicationFilePath());
+                    process.setArguments({path});
+                    process.setStandardOutputFile(QProcess::nullDevice());
+                    process.setStandardErrorFile(QProcess::nullDevice());
+                    qint64 pid;
+                    process.startDetached(&pid);
+                });
+                menu.addAction(action);
+            }
+
+            action = new QAction("&Append", this);
+            connect(action, &QAction::triggered, this, [this](){
+                auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
+                auto path  = getPathFromExplorerViewIndexModel(index);
+                if (path.toLower().endsWith(".dlt"))
+                    appendDltFile(path);
+                else
+                    openDlfFile(path,false);
+            });
+            menu.addAction(action);
+        }
     }
     else
     {
         /* TODO:
-                search form, search threads
+                [done] search form,
+                [TODO]  search form connections
+                [done] search threads
         */
         action = new QAction("&Find in files", this);
+
         connect(action, &QAction::triggered, this, [this](){
             auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
             auto path  = getPathFromExplorerViewIndexModel(index);
-            qDebug() << "Find in files - triggered" << path;
+
+            searchInFilesDialog->setFolder(path);
+            searchInFilesDialog->show();
         });
         menu.addAction(action);
 
+        action = new QAction("Open all files", this);
+        //action->setEnabled(false);
+        connect(action, &QAction::triggered, this, [this](){
+            auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
+            auto path  = getPathFromExplorerViewIndexModel(index);
+
+            QStringList  files;
+            QDirIterator it_sh(path, QStringList() << "*.dlt", QDir::Files, QDirIterator::Subdirectories);
+
+            while (it_sh.hasNext())
+            {
+                files.append(it_sh.next());
+            }
+
+            auto start = QDateTime::currentMSecsSinceEpoch();
+            openDltFile(files); outputfileIsTemporary = true;
+
+            std::unique_ptr<QMetaObject::Connection> pconn{new QMetaObject::Connection};
+            QMetaObject::Connection &conn = *pconn;
+            conn = QObject::connect(dltIndexer, &DltFileIndexer::finishIndex,
+                                [this, pconn = std::move(pconn), &conn, start, numFiles = files.size()](){
+                QObject::disconnect(conn);
+
+                auto durationMs = QDateTime::currentMSecsSinceEpoch() - start;
+                qDebug () << QString("%1 files loaded in %2 ms").arg(numFiles).arg(durationMs);
+                // ...
+                /* Trigger sorting of messages by time */
+            });
+        });
+        menu.addAction(action);
     }
     menu.addSeparator();
 
@@ -6721,11 +6777,18 @@ void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
     connect(action, &QAction::triggered, this, [this](){
         auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
         auto path  = getPathFromExplorerViewIndexModel(index);
-
-        auto path_splitted = path.split("/");
+#ifdef WIN32
+        QProcess process;
+//        process.setProgram("explorer.exe");
+//        process.setArguments({QString("%1\"%2\"").arg("/select,", QDir::toNativeSeparators(path))});
+//        process.startDetached();
+        process.startDetached(QString("explorer.exe /select,%1")
+                                    .arg(QDir::toNativeSeparators(path)));
+#else
+        auto path_splitted = path.split(QDir::separator());
         path = path_splitted.mid(0, path_splitted.length()-1).join(QDir::separator());
-
         QDesktopServices::openUrl( QUrl::fromLocalFile(path) );
+#endif
     });
     menu.addAction(action);
 
