@@ -286,6 +286,8 @@ void MainWindow::initState()
     injectionServiceId.clear();
     injectionData.clear();
     injectionDataBinary = false;
+
+    searchInFilesDialog = new SearchInFilesDialog(this);
 }
 
 void MainWindow::initView()
@@ -474,11 +476,13 @@ void MainWindow::initSignalConnections()
     connect(this, &MainWindow::dltFileLoaded, this, [this](const QStringList& paths){
         QSortFilterProxyModel*   proxyModel = reinterpret_cast<QSortFilterProxyModel*>(ui->exploreView->model());
         QFileSystemModel*        fsModel    = reinterpret_cast<QFileSystemModel*>(proxyModel->sourceModel());
-
-        ui->exploreView->expand(
-                    proxyModel->mapFromSource(fsModel->index(recentFiles[0])));
         ui->exploreView->scrollTo(
                     proxyModel->mapFromSource(fsModel->index(recentFiles[0])));
+    });
+    /* Connect search result request for opening a file */
+    connect(searchInFilesDialog, &SearchInFilesDialog::openDltFiles, this, [this](const QStringList& files){
+        openDltFile(files);
+        outputfileIsTemporary = false;
     });
 }
 
@@ -1091,7 +1095,7 @@ bool MainWindow::openDltFile(QStringList fileNames)
     if (ret)
         emit dltFileLoaded(fileNames);
 
-    qDebug() << "Open files done" << __FILE__ << __LINE__ << ret;
+    //qDebug() << "Open files done" << __FILE__ << __LINE__;
     return ret;
 }
 
@@ -6723,7 +6727,21 @@ void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
             qDebug() << "Find in files - triggered" << path;
         });
         menu.addAction(action);
+
+
+        
 #endif
+		action = new QAction("&Find in files", this);
+
+        connect(action, &QAction::triggered, this, [this](){
+            auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
+            auto path  = getPathFromExplorerViewIndexModel(index);
+
+            searchInFilesDialog->setFolder(path);
+            searchInFilesDialog->show();
+        });
+        menu.addAction(action);
+        
         action = new QAction("Open all files", this);
         //action->setEnabled(false);
         connect(action, &QAction::triggered, this, [this](){
@@ -6739,19 +6757,8 @@ void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
             }
 
             auto start = QDateTime::currentMSecsSinceEpoch();
-            openDltFile(files); outputfileIsTemporary = true;
-
-            std::unique_ptr<QMetaObject::Connection> pconn{new QMetaObject::Connection};
-            QMetaObject::Connection &conn = *pconn;
-            conn = QObject::connect(dltIndexer, &DltFileIndexer::finishIndex,
-                                [this, pconn = std::move(pconn), &conn, start, numFiles = files.size()](){
-                QObject::disconnect(conn);
-
-                auto durationMs = QDateTime::currentMSecsSinceEpoch() - start;
-                qDebug () << QString("%1 files loaded in %2 ms").arg(numFiles).arg(durationMs);
-                // ...
-                /* Trigger sorting of messages by time */
-            });
+            openDltFile(files); 
+            outputfileIsTemporary = false;
         });
         menu.addAction(action);
     }
@@ -6775,9 +6782,6 @@ void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
         auto path  = getPathFromExplorerViewIndexModel(index);
 #ifdef WIN32
         QProcess process;
-//        process.setProgram("explorer.exe");
-//        process.setArguments({QString("%1\"%2\"").arg("/select,", QDir::toNativeSeparators(path))});
-//        process.startDetached();
         process.startDetached(QString("explorer.exe /select,%1")
                                     .arg(QDir::toNativeSeparators(path)));
 #else
