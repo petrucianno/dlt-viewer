@@ -342,12 +342,6 @@ void MainWindow::initView()
     ui->exploreView->hideColumn(2);
     ui->exploreView->hideColumn(3);
 
-    if (recentFiles.size() > 0)
-    {
-        ui->exploreView->scrollTo(
-                    sortProxyModel->mapFromSource(model->index(recentFiles[0])));
-    }
-
     /* Enable column sorting of config widget */
     ui->configWidget->sortByColumn(0, Qt::AscendingOrder); // column/order to sort by
     ui->configWidget->setSortingEnabled(true);             // should cause sort on add
