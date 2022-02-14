@@ -90,8 +90,7 @@ MainWindow::MainWindow(QWidget *parent) :
     timer(this),
     qcontrol(this),
     pulseButtonColor(255, 40, 40),
-    isSearchOngoing(false),
-    searchInFilesDialog(new SearchInFilesDialog(this))
+    isSearchOngoing(false)
 {
     settings = QDltSettingsManager::getInstance();
     ui->setupUi(this);
@@ -289,6 +288,8 @@ void MainWindow::initState()
     injectionServiceId.clear();
     injectionData.clear();
     injectionDataBinary = false;
+
+    searchInFilesDialog = new SearchInFilesDialog(this);
 }
 
 void MainWindow::initView()
