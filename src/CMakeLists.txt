@@ -14,6 +14,7 @@
 
 QT5_ADD_RESOURCES(UI_RESOURCES_RCC resources/resource.qrc)
 
+
 add_executable(dlt-viewer
     main.cpp
     mainwindow.cpp
