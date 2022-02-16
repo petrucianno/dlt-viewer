@@ -61,46 +61,46 @@ public:
     }
 };
 
+template<typename T>
+class SafeQQueue
+{
+    QQueue<T> queue;
+    QMutex    mutex;
+public:
+    SafeQQueue(){}
+    SafeQQueue(const SafeQQueue&) = delete;
+    void enqueue(const T &el)
+    {
+        QMutexLocker l(&mutex);
+        queue.enqueue(el);
+    }
+    T dequeue()
+    {
+        QMutexLocker l(&mutex);
+        return queue.dequeue();
+    }
+    int size()
+    {
+        QMutexLocker l(&mutex);
+        return queue.size();
+    }
+    bool empty()
+    {
+        QMutexLocker l(&mutex);
+        return queue.empty();
+    }
+    void clear()
+    {
+        QMutexLocker l(&mutex);
+        queue.clear();
+    }
+};
+
 typedef std::pair<std::shared_ptr<QDltFile>, QSafeList<int>> qpair_t;
 
 class DltMessageFinder : public QObject
 {
     Q_OBJECT
-
-    template<typename T>
-    class SafeQQueue
-    {
-        QQueue<T> queue;
-        QMutex    mutex;
-    public:
-        SafeQQueue(){}
-        SafeQQueue(const SafeQQueue&) = delete;
-        void enqueue(const T &el)
-        {
-            QMutexLocker l(&mutex);
-            queue.enqueue(el);
-        }
-        T dequeue()
-        {
-            QMutexLocker l(&mutex);
-            return queue.dequeue();
-        }
-        int size()
-        {
-            QMutexLocker l(&mutex);
-            return queue.size();
-        }
-        bool empty()
-        {
-            QMutexLocker l(&mutex);
-            return queue.empty();
-        }
-        void clear()
-        {
-            QMutexLocker l(&mutex);
-            queue.clear();
-        }
-    };
 
     static DltMessageFinder* obj;
     DltMessageFinder(QObject *parent = nullptr);
@@ -118,6 +118,30 @@ class DltMessageFinder : public QObject
 
     static void depth_search_worker();
     static void shallow_search_worker();
+
+    enum WorkerState {WORKER_STARTED, WORKER_FINISHED};
+
+    void setWorkerState(WorkerState state)
+    {
+        if (WORKER_STARTED == state)
+        {
+            sem_worker_demand->acquire(1);
+        }
+        else if (WORKER_FINISHED == state)
+        {
+            sem_worker_demand->release(1);
+
+            if (sem_worker_demand->available() >= QThreadPool::globalInstance()->maxThreadCount())
+            {
+                running_lock.lockForWrite();
+                is_running = false;
+                running_lock.unlock();
+
+                emit searchFinished();
+                qDebug() << "Search finished";
+            }
+        }
+    }
 
 public:
     ~DltMessageFinder();

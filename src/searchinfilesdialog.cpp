@@ -75,20 +75,20 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
         item->setText(0, path);
         item->setToolTip(0, path);
         item->setText(1, "1");
-
+        
         auto message = QString("index: " ) + QString::number(result->second.at(0));
-        child->setText(0, message.leftJustified(8, ' ', true));
-        child->setToolTip(0, message);
+        child->setText(0, message);
+        child->setToolTip(0, "Click to display results at " + message);
         item->addChild(child);
 
     });
     connect(multiFileSearcher, &DltMessageFinder::resultPartial, this, [this](int f_index, int index){
-        /*
+#if 0
         qDebug() << QString("[%1] + parent: %2 child: %3")
                         .arg(QDateTime::currentMSecsSinceEpoch())
                         .arg(QString::number(f_index),
                              QString::number(index));
-        */
+#endif
         auto items = ui->treeWidgetResults->topLevelItemCount();
 
         if (items > 0)
@@ -99,7 +99,9 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
 
             tree_item->addChild(sub_item);
             tree_item->setText(1, QString::number(result->second.size()));
-            sub_item->setText(0, "index: " + QString::number(result->second.at(index)));
+            auto message = "index: " + QString::number(result->second.at(index));
+            sub_item->setText(0, message);
+            sub_item->setToolTip(0, "Click to display results at " + message);
         }
     });
 
@@ -125,8 +127,6 @@ void SearchInFilesDialog::dltFilesOpened(const QStringList &files)
 
 void SearchInFilesDialog::on_buttonSearch_clicked()
 {
-    qDebug() << __FUNCTION__;
-
     if (!QDir(m_currentPath).exists())
     {
         /* Dialog, folder not exists */
@@ -195,8 +195,6 @@ void SearchInFilesDialog::on_buttonSearch_clicked()
 
 void SearchInFilesDialog::on_buttonCancel_clicked()
 {
-    qDebug() << __FUNCTION__;
-
     if (multiFileSearcher->isRunning())
     {/* This will also re-enable the search button */
         multiFileSearcher->cancelSearch(false);/* Stop the search, but keep results */
@@ -211,7 +209,6 @@ void SearchInFilesDialog::on_buttonCancel_clicked()
 
 void SearchInFilesDialog::on_buttonAddPattern_clicked()
 {
-    qDebug() << __FUNCTION__;
     auto rowIdx = ui->tableWidgetPatterns->rowCount();
     auto checkBox = new QCheckBox(ui->tableWidgetPatterns);
     auto table = ui->tableWidgetPatterns;
@@ -231,7 +228,6 @@ void SearchInFilesDialog::on_buttonAddPattern_clicked()
 
 void SearchInFilesDialog::on_buttonRemovePattern_clicked()
 {
-    qDebug() << __FUNCTION__;
     auto table = ui->tableWidgetPatterns;
     auto sel_m = table->selectionModel();
 
@@ -247,7 +243,6 @@ void SearchInFilesDialog::on_directoryTextBox_textChanged(const QString &arg1)
 
 void SearchInFilesDialog::on_directoryTextBox_returnPressed()
 {
-    //on_buttonSearch_clicked();
 }
 
 void SearchInFilesDialog::showEvent(QShowEvent *event)
@@ -274,7 +269,6 @@ void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item
         auto results      = multiFileSearcher->getResults().at(topLvlIndex);
         /* Get .dlt file content for current index */
         auto dltFile      = results->first;
-        auto fileName     = dltFile->getFileName();
 
         {/*  */
             QTableWidgetItem* ourItem = nullptr;
@@ -334,9 +328,9 @@ void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item
             }
 
             /* Scroll to message idx: at(childIndex) */
-            resultsTable->scrollToItem(ourItem);
-            resultsTable->setRangeSelected({ourItemIndex, 0, ourItemIndex, 4}, true);
             resultsTable->setFocus();
+            resultsTable->scrollToItem(ourItem, QAbstractItemView::PositionAtCenter);
+            resultsTable->setRangeSelected({ourItemIndex, 0, ourItemIndex, 4}, true);
         }
     }
 }
@@ -353,7 +347,6 @@ void SearchInFilesDialog::on_treeWidgetResults_customContextMenuRequested(const 
     auto item         = resultsTree->itemAt(pos);
     int  topLvlIndex  = resultsTree->indexOfTopLevelItem(item);
     int  childIndex   = 0;
-    long jumpStep     = 0;
 
     if (-1 == topLvlIndex)
     {/* item is a treeChild */

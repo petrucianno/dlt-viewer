@@ -54,9 +54,8 @@ void DltMessageFinder::search(QStringList &paths, const QString &&expression)
 
     for (int i = 0; i < th_cnt/2; i++)
     {
-        QThreadPool::globalInstance()->start(shallow_search_worker, MAIN_WORKER_PRIO);
+        QThreadPool::globalInstance()->start(&DltMessageFinder::shallow_search_worker, MAIN_WORKER_PRIO);
     }
-
 }
 
 void DltMessageFinder::cancelSearch(bool full_stop)
@@ -72,7 +71,11 @@ void DltMessageFinder::cancelSearch(bool full_stop)
         results.clear();
         m_finalResults.clear();
     }
-
+#if 0
+    qDebug() << QString("[%1] - Canceled search. Full Stop: %2...")
+                    .arg(QDateTime::currentMSecsSinceEpoch())
+                    .arg(full_stop);
+#endif
     emit stoppedSearch(full_stop);
 }
 
@@ -81,16 +84,18 @@ void DltMessageFinder::shallow_search_worker()
     QRegExp rx(obj->m_expression);
     rx.setCaseSensitivity(Qt::CaseInsensitive);
 
+    obj->setWorkerState(WORKER_STARTED);
+#if 0
     qDebug() << QString("[%1] - Started search. Files to look in: %2...")
                     .arg(QDateTime::currentMSecsSinceEpoch())
                     .arg(obj->q_paths.size());
-
+#endif
     while((!obj->q_paths.empty()) && obj->isRunning())
     {
         QString  dlt_path =  obj->q_paths.dequeue();
-
-        // qDebug() << "Shallow search in: " + dlt_path;
-
+#if 0
+        qDebug() << QString("[%1] Shallow search in: " + dlt_path).arg(QDateTime::currentMSecsSinceEpoch());
+#endif
         auto file = std::make_shared<QDltFile>();
         int message_cnt = 0;
 
@@ -118,13 +123,10 @@ void DltMessageFinder::shallow_search_worker()
                 obj->m_finalResults.append(result);
 
                 emit obj->foundFile(index);
-                // qDebug() << QString("[%1] - parent: %2")
-                //                 .arg(QDateTime::currentMSecsSinceEpoch())
-                //                 .arg(QString::number(index));
 #if 0
-                qDebug() << QString("[%1] Expression (%3) found in file: %2")
-                                .arg(QString::number(QDateTime::currentMSecsSinceEpoch()), dlt_path, rx.pattern());
-
+                 qDebug() << QString("[%1] - parent: %2")
+                                 .arg(QDateTime::currentMSecsSinceEpoch())
+                                 .arg(QString::number(index));
 #endif
                 QThreadPool::globalInstance()->start(depth_search_worker, MAIN_WORKER_PRIO * 2);
                 break;
@@ -132,14 +134,12 @@ void DltMessageFinder::shallow_search_worker()
         }
     }
 
-    qDebug() << QString("[%1] - File queue empty. Query matched %2 files...")
-                    .arg(QDateTime::currentMSecsSinceEpoch())
-                    .arg(obj->results.size());
+    obj->setWorkerState(WORKER_FINISHED);
 }
 
 void DltMessageFinder::depth_search_worker(){
 
-    obj->sem_worker_demand->acquire(1);
+    obj->setWorkerState(WORKER_STARTED);
 
     QRegExp rx(obj->m_expression);
     rx.setCaseSensitivity(Qt::CaseInsensitive);
@@ -175,11 +175,13 @@ void DltMessageFinder::depth_search_worker(){
             result->second.append(i);
 
             emit obj->resultPartial(f_index, index);
-            // qDebug() << QString("[%1] - parent: %2 child: %3")
-            //                 .arg(QDateTime::currentMSecsSinceEpoch())
-            //                 .arg(QString::number(f_index),
-            //                      QString::number(index));
-            // qDebug() << "Message found: " + message.toStringPayload();
+#if 0
+            qDebug() << QString("[%1] - parent: %2 child: %3")
+                            .arg(QDateTime::currentMSecsSinceEpoch())
+                            .arg(QString::number(f_index),
+                                 QString::number(index));
+            qDebug() << "Message found: " + message.toStringPayload();
+#endif
         }
     }
 #if 0
@@ -188,16 +190,5 @@ void DltMessageFinder::depth_search_worker(){
                              name, QString::number(result->second.size()));
 #endif
 
-    obj->sem_worker_demand->release(1);
-
-    if (obj->sem_worker_demand->available() >= QThreadPool::globalInstance()->maxThreadCount())
-    {
-        obj->running_lock.lockForWrite();
-        obj->is_running = false;
-        obj->running_lock.unlock();
-
-        emit obj->searchFinished();
-
-        qDebug() << "Search finished";
-    }
+    obj->setWorkerState(WORKER_FINISHED);
 };
