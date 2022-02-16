@@ -3,7 +3,7 @@
 #include "dltmessagefinder.h"
 
 #define MAIN_WORKER_PRIO    2
-
+ 
 DltMessageFinder* DltMessageFinder::obj = nullptr;
 
 DltMessageFinder::DltMessageFinder(QObject *parent) :
