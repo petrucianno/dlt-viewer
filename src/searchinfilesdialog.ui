@@ -43,9 +43,12 @@
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="labelCurrentFile">
+         <widget class="QLabel" name="dummyLabel">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
-           <string>Searching in: </string>
+           <string/>
           </property>
          </widget>
         </item>
@@ -200,57 +203,106 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_5">
             <item>
-             <widget class="QTreeWidget" name="treeWidgetResults">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
+             <layout class="QVBoxLayout" name="verticalLayout_6">
+              <property name="leftMargin">
+               <number>0</number>
               </property>
-              <property name="minimumSize">
-               <size>
-                <width>190</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="layoutDirection">
-               <enum>Qt::LeftToRight</enum>
-              </property>
-              <property name="showDropIndicator" stdset="0">
-               <bool>false</bool>
-              </property>
-              <property name="textElideMode">
-               <enum>Qt::ElideLeft</enum>
-              </property>
-              <property name="horizontalScrollMode">
-               <enum>QAbstractItemView::ScrollPerPixel</enum>
-              </property>
-              <property name="animated">
-               <bool>true</bool>
-              </property>
-              <property name="headerHidden">
-               <bool>true</bool>
-              </property>
-              <attribute name="headerVisible">
-               <bool>false</bool>
-              </attribute>
-              <attribute name="headerMinimumSectionSize">
-               <number>15</number>
-              </attribute>
-              <attribute name="headerStretchLastSection">
-               <bool>true</bool>
-              </attribute>
-              <column>
-               <property name="text">
-                <string>File</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>Nr. of messages</string>
-               </property>
-              </column>
-             </widget>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_2">
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QPushButton" name="pushButtonSelectAll">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>Select All</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="pushButtonDeselectAll">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>Deselect All</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="pushButtonOpenSelected">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>Open Selected</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <widget class="QTreeWidget" name="treeWidgetResults">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>190</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="showDropIndicator" stdset="0">
+                 <bool>false</bool>
+                </property>
+                <property name="textElideMode">
+                 <enum>Qt::ElideLeft</enum>
+                </property>
+                <property name="horizontalScrollMode">
+                 <enum>QAbstractItemView::ScrollPerPixel</enum>
+                </property>
+                <property name="animated">
+                 <bool>true</bool>
+                </property>
+                <property name="headerHidden">
+                 <bool>true</bool>
+                </property>
+                <attribute name="headerVisible">
+                 <bool>false</bool>
+                </attribute>
+                <attribute name="headerMinimumSectionSize">
+                 <number>15</number>
+                </attribute>
+                <attribute name="headerStretchLastSection">
+                 <bool>true</bool>
+                </attribute>
+                <column>
+                 <property name="text">
+                  <string>Check</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>File</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>Nr. of messages</string>
+                 </property>
+                </column>
+               </widget>
+              </item>
+             </layout>
             </item>
             <item>
              <widget class="QTableWidget" name="tableWidgetResults">
@@ -275,11 +327,6 @@
               <attribute name="verticalHeaderVisible">
                <bool>false</bool>
               </attribute>
-              <row>
-               <property name="text">
-                <string>New Row</string>
-               </property>
-              </row>
               <column>
                <property name="text">
                 <string>Index</string>
@@ -305,31 +352,6 @@
                 <string>Payload</string>
                </property>
               </column>
-              <item row="0" column="0">
-               <property name="text">
-                <string>1</string>
-               </property>
-              </item>
-              <item row="0" column="1">
-               <property name="text">
-                <string>1</string>
-               </property>
-              </item>
-              <item row="0" column="2">
-               <property name="text">
-                <string>1</string>
-               </property>
-              </item>
-              <item row="0" column="3">
-               <property name="text">
-                <string>1</string>
-               </property>
-              </item>
-              <item row="0" column="4">
-               <property name="text">
-                <string>1</string>
-               </property>
-              </item>
              </widget>
             </item>
            </layout>

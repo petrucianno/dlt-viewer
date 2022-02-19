@@ -47,6 +47,12 @@ private slots:
 
     void on_treeWidgetResults_customContextMenuRequested(const QPoint &pos);
 
+    void on_pushButtonSelectAll_clicked();
+
+    void on_pushButtonDeselectAll_clicked();
+
+    void on_pushButtonOpenSelected_clicked();
+
 protected:
     void closeEvent(QCloseEvent *event) override
     {

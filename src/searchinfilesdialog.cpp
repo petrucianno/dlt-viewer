@@ -38,13 +38,17 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
     });
     connect(multiFileSearcher, &DltMessageFinder::stoppedSearch, this, [this](bool full_stop){
         // set search button enabled
-        ui->buttonSearch->setEnabled(true);
         ui->buttonCancel->setText("Close");
+        ui->buttonSearch->setEnabled(true);
         /* enable textbox */
         ui->directoryTextBox->setEnabled(true);
 
         if (full_stop)
         {
+            ui->pushButtonDeselectAll->setEnabled(false);
+            ui->pushButtonSelectAll->setEnabled(false);
+            ui->pushButtonOpenSelected->setEnabled(false);
+
             ui->treeWidgetResults->clear();
             ui->tableWidgetResults->setRowCount(0);
         }
@@ -63,24 +67,33 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
                         .arg(QDateTime::currentMSecsSinceEpoch())
                         .arg(QString::number(index));
         */
-        QTreeWidgetItem* item  = new QTreeWidgetItem;
-        QTreeWidgetItem* child = new QTreeWidgetItem;
-        ui->treeWidgetResults->insertTopLevelItem(
-                    ui->treeWidgetResults->topLevelItemCount(), item);
+        QTreeWidgetItem* item     = new QTreeWidgetItem;
+        QTreeWidgetItem* sub_item = new QTreeWidgetItem;
 
         auto result = multiFileSearcher->getResults().at(index);
         QString path = result->first->getFileName();
 
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsSelectable);
+        item->setCheckState(0, Qt::Unchecked);
 
         item->setText(0, path);
         item->setToolTip(0, path);
         item->setText(1, "1");
         
         auto message = QString("index: " ) + QString::number(result->second.at(0));
-        child->setText(0, message);
-        child->setToolTip(0, "Click to display results at " + message);
-        item->addChild(child);
+        sub_item->setText(0, "        "+message);
+        sub_item->setToolTip(0, "Click to display results at " + message);
+        item->addChild(sub_item);
 
+        if (0u == ui->treeWidgetResults->topLevelItemCount())
+        {
+            ui->pushButtonDeselectAll->setEnabled(true);
+            ui->pushButtonSelectAll->setEnabled(true);
+            ui->pushButtonOpenSelected->setEnabled(true);
+        }
+
+        ui->treeWidgetResults->insertTopLevelItem(
+                    ui->treeWidgetResults->topLevelItemCount(), item);
     });
     connect(multiFileSearcher, &DltMessageFinder::resultPartial, this, [this](int f_index, int index){
 #if 0
@@ -100,7 +113,7 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
             tree_item->addChild(sub_item);
             tree_item->setText(1, QString::number(result->second.size()));
             auto message = "index: " + QString::number(result->second.at(index));
-            sub_item->setText(0, message);
+            sub_item->setText(0, "        "+message);
             sub_item->setToolTip(0, "Click to display results at " + message);
         }
     });
@@ -121,7 +134,7 @@ void SearchInFilesDialog::setFolder(const QString &path)
 
 void SearchInFilesDialog::dltFilesOpened(const QStringList &files)
 {
-
+(void)files;
 }
 
 
@@ -214,15 +227,14 @@ void SearchInFilesDialog::on_buttonAddPattern_clicked()
     auto table = ui->tableWidgetPatterns;
 
     checkBox->setCheckState(Qt::Checked);
-    checkBox->setStyleSheet("margin-left:15%;");
+    checkBox->setStyleSheet("margin-left:25%;");
     table->insertRow(rowIdx);
     table->setCellWidget(rowIdx, 0, checkBox);
 
     auto item = new QTableWidgetItem("");
     item->setText("");
-//    item->
     table->setItem(rowIdx, 1, item);
-
+    table->setFocus();
 }
 
 
@@ -338,21 +350,17 @@ void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item
 
 void SearchInFilesDialog::on_treeWidgetResults_customContextMenuRequested(const QPoint &pos)
 {
-    qDebug() << __FUNCTION__;
-
     if (multiFileSearcher->getResults().size() <= 0)
         return;
 
     auto resultsTree  = ui->treeWidgetResults;
     auto item         = resultsTree->itemAt(pos);
     int  topLvlIndex  = resultsTree->indexOfTopLevelItem(item);
-    int  childIndex   = 0;
 
     if (-1 == topLvlIndex)
     {/* item is a treeChild */
         auto parent = item->parent();
 
-        childIndex  = parent->indexOfChild(item);
         topLvlIndex = resultsTree->indexOfTopLevelItem(parent);
     }
 
@@ -370,7 +378,47 @@ void SearchInFilesDialog::on_treeWidgetResults_customContextMenuRequested(const 
 }
 
 
+void SearchInFilesDialog::on_pushButtonSelectAll_clicked()
+{
+    auto resultsTree = ui->treeWidgetResults;
+    int  items_cnt = resultsTree->topLevelItemCount();
+
+    for (int i = 0; i < items_cnt; i++)
+    {
+        resultsTree->topLevelItem(i)->setCheckState(0, Qt::Checked);
+    }
+}
 
 
+void SearchInFilesDialog::on_pushButtonDeselectAll_clicked()
+{
+    auto resultsTree = ui->treeWidgetResults;
+    int  items_cnt = resultsTree->topLevelItemCount();
 
+    for (int i = 0; i < items_cnt; i++)
+    {
+        resultsTree->topLevelItem(i)->setCheckState(0, Qt::Unchecked);
+    }
+}
+
+
+void SearchInFilesDialog::on_pushButtonOpenSelected_clicked()
+{
+    auto resultsTree = ui->treeWidgetResults;
+    int  items_cnt = resultsTree->topLevelItemCount();
+    QStringList files;
+
+    for (int i = 0; i < items_cnt; i++)
+    {
+        auto results = multiFileSearcher->getResults().at(i);
+        auto dltFile = results->first->getFileName();
+
+        if (Qt::Checked == resultsTree->topLevelItem(i)->checkState(0))
+        {
+            files << dltFile;
+        }
+    }
+
+    emit openDltFiles(files);
+}
 
