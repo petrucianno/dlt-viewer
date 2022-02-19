@@ -227,7 +227,6 @@ signals:
 public slots:
 
     void stop();
-
 };
 
 #endif // DLTFILEINDEXER_H
