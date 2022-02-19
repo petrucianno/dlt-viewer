@@ -106,10 +106,10 @@ void DltMessageFinder::shallow_search_worker()
 
         for (int i = 0; (i < message_cnt) && obj->isRunning(); i++)
         {
-            QDltMsg message;
-            file->getMsg(i, message);
+            QDltMsg msg;
+            file->getMsg(i, msg);
 
-            bool found = (rx.indexIn(message.toStringPayload()) >= 0);
+            bool found = (rx.indexIn(msg.getEcuid() + msg.getApid() + msg.getCtid() + msg.toStringPayload()) >= 0);
 
             if (found)
             {
@@ -164,10 +164,10 @@ void DltMessageFinder::depth_search_worker(){
 
     for (int i = start + 1; (i < message_cnt) && obj->isRunning(); i++)
     {
-        QDltMsg message;
-        file->getMsg(i, message);
+        QDltMsg msg;
+        file->getMsg(i, msg);
 
-        bool found = (rx.indexIn(message.toStringPayload()) >= 0);
+        bool found = (rx.indexIn(msg.getEcuid() + msg.getApid() + msg.getCtid() + msg.toStringPayload()) >= 0);
 
         if (found)
         {
