@@ -19,7 +19,7 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
     ui->setupUi(this);
 
     ui->treeWidgetResults->setColumnWidth(0, ui->treeWidgetResults->width() - 10);
-    ui->treeWidgetResults->setColumnWidth(1, 10);
+    ui->treeWidgetResults->setColumnWidth(1, 20);
 
     ui->tableWidgetResults->setColumnWidth(4, 500);
 
@@ -45,6 +45,8 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
 
         if (full_stop)
         {
+            ui->groupBoxSearchResult->setTitle("Search results:");
+
             ui->pushButtonDeselectAll->setEnabled(false);
             ui->pushButtonSelectAll->setEnabled(false);
             ui->pushButtonOpenSelected->setEnabled(false);
@@ -79,7 +81,7 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
         item->setText(0, path);
         item->setToolTip(0, path);
         item->setText(1, "1");
-        
+
         auto message = QString("index: " ) + QString::number(result->second.at(0));
         sub_item->setText(0, "        "+message);
         sub_item->setToolTip(0, "Click to display results at " + message);
@@ -94,6 +96,10 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
 
         ui->treeWidgetResults->insertTopLevelItem(
                     ui->treeWidgetResults->topLevelItemCount(), item);
+
+        auto newTitle = QString("Search results: %1 matches in %2 files").arg(totalMatches++)
+                .arg(ui->treeWidgetResults->topLevelItemCount());
+        ui->groupBoxSearchResult->setTitle(newTitle);
     });
     connect(multiFileSearcher, &DltMessageFinder::resultPartial, this, [this](int f_index, int index){
 #if 0
@@ -116,6 +122,9 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
             sub_item->setText(0, "        "+message);
             sub_item->setToolTip(0, "Click to display results at " + message);
         }
+        auto newTitle = QString("Search results: %1 matches in %2 files").arg(totalMatches++)
+                .arg(ui->treeWidgetResults->topLevelItemCount());
+        ui->groupBoxSearchResult->setTitle(newTitle);
     });
 
 

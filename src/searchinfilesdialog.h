@@ -17,6 +17,7 @@ class SearchInFilesDialog : public QDialog
     Ui::SearchInFilesDialog *ui;
     DltMessageFinder *multiFileSearcher;
     QString m_currentPath;
+    long totalMatches = 0;
     QTreeWidgetItem tree_results;
 
 public:
