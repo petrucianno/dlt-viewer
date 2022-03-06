@@ -19,11 +19,12 @@ DltMessageFinder::DltMessageFinder(QObject *parent) :
 
 DltMessageFinder::~DltMessageFinder()
 {
-    cancelSearch();
+    cancelSearch(true);
+
+    delete sem_worker_demand;
 
     if (nullptr == obj)
        delete obj;
-    delete sem_worker_demand;
 }
 
 DltMessageFinder *DltMessageFinder::getInstance(QObject *parent)

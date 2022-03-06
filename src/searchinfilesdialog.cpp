@@ -18,10 +18,10 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    ui->treeWidgetResults->setColumnWidth(0, ui->treeWidgetResults->width() - 10);
-    ui->treeWidgetResults->setColumnWidth(1, 20);
+    ui->treeWidgetResults->setColumnWidth(0, ui->treeWidgetResults->width() - 65);
+    ui->treeWidgetResults->setColumnWidth(1, 60);
 
-    ui->tableWidgetResults->setColumnWidth(4, 500);
+    ui->tableWidgetResults->setColumnWidth(4, 1200);
 
     /* enable custom context menu */
     ui->treeWidgetResults->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -53,6 +53,8 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
 
             ui->treeWidgetResults->clear();
             ui->tableWidgetResults->setRowCount(0);
+
+            totalMatches = 0;
         }
     });
     connect(multiFileSearcher, &DltMessageFinder::searchFinished, this, [this](){
@@ -276,9 +278,62 @@ void SearchInFilesDialog::showEvent(QShowEvent *event)
 void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item, int column)
 {
     (void)column;
+    auto resultsTable = ui->tableWidgetResults;
     int topLvlIndex = ui->treeWidgetResults->indexOfTopLevelItem(item);
 
-    if (-1 == topLvlIndex)
+    /* Delete results table items */
+    if (resultsTable->rowCount() > 0)
+    {
+        resultsTable->setRowCount(0);
+        resultsTable->scrollToTop();
+    }
+
+    if (-1 != topLvlIndex)
+    {
+        /* ToDo: Create a table with all results from the file and display it as usual */
+        auto results      = multiFileSearcher->getResults().at(topLvlIndex);
+        auto dltFile      = results->first;
+        auto numResults   = results->second.size();
+
+        for (int idx = 0; idx < numResults; idx++)
+        {
+            auto item    = new QTableWidgetItem;
+            auto msg_idx = results->second.at(idx);
+            QDltMsg message;
+
+            /* get message from file and insert it in the table */
+            dltFile->getMsg(msg_idx, message);
+            resultsTable->insertRow(idx);
+
+            /* payload */
+            item->setText(message.toStringPayload());
+            resultsTable->setItem(idx, 4, item);
+
+            /* index */
+            item = new QTableWidgetItem;
+            item->setText(QString::number(msg_idx));
+            resultsTable->setItem(idx, 0, item);
+
+
+            /* ecuid */
+            item = new QTableWidgetItem;
+            item->setText(message.getEcuid());
+            resultsTable->setItem(idx, 1, item);
+
+            /* apid */
+            item = new QTableWidgetItem;
+            item->setText(message.getApid());
+            resultsTable->setItem(idx, 2, item);
+
+            /* ctid */
+            item = new QTableWidgetItem;
+            item->setText(message.getCtid());
+            resultsTable->setItem(idx, 3, item);
+        }
+
+        resultsTable->setFocus();
+    }
+    else
     {/* it means, a child was clicked */
         auto parent = item->parent();
         auto childIndex = 0;
@@ -286,7 +341,6 @@ void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item
         topLvlIndex = ui->treeWidgetResults->indexOfTopLevelItem(parent);
         childIndex  = parent->indexOfChild(item);
 
-        auto resultsTable = ui->tableWidgetResults;
         auto results      = multiFileSearcher->getResults().at(topLvlIndex);
         /* Get .dlt file content for current index */
         auto dltFile      = results->first;
@@ -301,10 +355,6 @@ void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item
 
             start = (start >= 0)?start:0;
             end   = (end <= msgNumber)?end:msgNumber;
-
-            /* Delete results table items */
-            if (resultsTable->rowCount() > 0)
-                resultsTable->setRowCount(0);
 
             for (long idx = 0, msg_idx = start; msg_idx < end; idx++, msg_idx++)
             {
@@ -323,11 +373,6 @@ void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item
                 item->setText(QString::number(msg_idx));
                 resultsTable->setItem(idx, 0, item);
 
-                if (result_idx == msg_idx)
-                {
-                    ourItem      = item;
-                    ourItemIndex = idx;
-                }
 
                 /* ecuid */
                 item = new QTableWidgetItem;
@@ -344,8 +389,11 @@ void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item
                 item->setText(message.getCtid());
                 resultsTable->setItem(idx, 3, item);
 
-                ;
-                resultsTable->setRowHeight(resultsTable->row(item), 12);
+                if (result_idx == msg_idx)
+                {
+                    ourItem      = item;
+                    ourItemIndex = idx;
+                }
             }
 
             /* Scroll to message idx: at(childIndex) */
