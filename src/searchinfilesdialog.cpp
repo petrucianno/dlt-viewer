@@ -11,11 +11,16 @@
 
 #include "dlt_common.h"
 
-const int RESULT_INDEX_COL = 0;
-const int RESULT_ECUID_COL = 1;
-const int RESULT_APPID_COL = 2;
-const int RESULT_CTXID_COL = 3;
-const int RESULT_PAYLD_COL = 4;
+typedef enum
+{
+    RESULT_INDEX_COL = 0,
+    RESULT_TIME_COL,
+    RESULT_TIMEST_COL,
+    RESULT_ECUID_COL,
+    RESULT_APPID_COL,
+    RESULT_CTXID_COL,
+    RESULT_PAYLD_COL 
+}e_ResultsTableColumn;
 
 SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
     QDialog(parent),
@@ -27,7 +32,9 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
     ui->treeWidgetResults->setColumnWidth(0, ui->treeWidgetResults->width() - 65);
     ui->treeWidgetResults->setColumnWidth(1, 60);
 
-    ui->tableWidgetResults->setColumnWidth(RESULT_PAYLD_COL, 1200);
+    ui->tableWidgetResults->setColumnWidth(RESULT_TIME_COL, 130);
+    ui->tableWidgetResults->setColumnWidth(RESULT_TIMEST_COL, 90);
+    ui->tableWidgetResults->setColumnWidth(RESULT_PAYLD_COL, 1600);
     ui->tableWidgetResults->horizontalHeaderItem(RESULT_PAYLD_COL)->setTextAlignment(Qt::AlignLeft);
 
     /* enable custom context menu */
@@ -255,14 +262,21 @@ void SearchInFilesDialog::on_buttonAddPattern_clicked()
     table->setFocus();
 }
 
-/* TODO: Modifications needed */
 void SearchInFilesDialog::on_buttonRemovePattern_clicked()
 {
     auto table = ui->tableWidgetPatterns;
     auto sel_m = table->selectionModel();
+    QVector<int> indexes;
 
     foreach(auto index, sel_m->selectedRows())
-        table->removeRow(index.row());
+    {
+        indexes.append(index.row());
+    }
+    int len = indexes.size();
+    while(len-- > 0)
+    {
+        table->removeRow(indexes.at(len));
+    }
 }
 
 void SearchInFilesDialog::on_directoryTextBox_textChanged(const QString &arg1)
@@ -291,10 +305,17 @@ QTableWidgetItem* insertResultRow(QTableWidget *resultsTable, QDltMsg &message, 
     item->setText(message.toStringPayload());
     resultsTable->setItem(idx, RESULT_PAYLD_COL, item);
 
-    /* index */
+    /* time */
     item = new QTableWidgetItem;
-    item->setText(QString::number( msg_id ));
-    resultsTable->setItem(idx, RESULT_INDEX_COL, item);
+    QDateTime dt;
+    dt.setTime_t(message.getTime());
+    item->setText(dt.toString("yyyy-MM-dd hh:mm:ss"));
+    resultsTable->setItem(idx, RESULT_TIME_COL, item);
+
+    /* timestamp */
+    item = new QTableWidgetItem;
+    item->setText(QString::number(message.getTimestamp()/10000.));
+    resultsTable->setItem(idx, RESULT_TIMEST_COL, item);
 
     /* ecuid */
     item = new QTableWidgetItem;
@@ -310,6 +331,11 @@ QTableWidgetItem* insertResultRow(QTableWidget *resultsTable, QDltMsg &message, 
     item = new QTableWidgetItem;
     item->setText(message.getCtid());
     resultsTable->setItem(idx, RESULT_CTXID_COL, item);
+
+    /* index */
+    item = new QTableWidgetItem;
+    item->setText(QString::number( msg_id ));
+    resultsTable->setItem(idx, RESULT_INDEX_COL, item);
 
     return item;
 }
