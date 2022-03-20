@@ -11,6 +11,12 @@
 
 #include "dlt_common.h"
 
+const int RESULT_INDEX_COL = 0;
+const int RESULT_ECUID_COL = 1;
+const int RESULT_APPID_COL = 2;
+const int RESULT_CTXID_COL = 3;
+const int RESULT_PAYLD_COL = 4;
+
 SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::SearchInFilesDialog),
@@ -21,7 +27,8 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
     ui->treeWidgetResults->setColumnWidth(0, ui->treeWidgetResults->width() - 65);
     ui->treeWidgetResults->setColumnWidth(1, 60);
 
-    ui->tableWidgetResults->setColumnWidth(4, 1200);
+    ui->tableWidgetResults->setColumnWidth(RESULT_PAYLD_COL, 1200);
+    ui->tableWidgetResults->horizontalHeaderItem(RESULT_PAYLD_COL)->setTextAlignment(Qt::AlignLeft);
 
     /* enable custom context menu */
     ui->treeWidgetResults->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -248,7 +255,7 @@ void SearchInFilesDialog::on_buttonAddPattern_clicked()
     table->setFocus();
 }
 
-
+/* TODO: Modifications needed */
 void SearchInFilesDialog::on_buttonRemovePattern_clicked()
 {
     auto table = ui->tableWidgetPatterns;
@@ -274,6 +281,38 @@ void SearchInFilesDialog::showEvent(QShowEvent *event)
     ui->tabWidget->setCurrentIndex(0);
 }
 
+QTableWidgetItem* insertResultRow(QTableWidget *resultsTable, QDltMsg &message, int idx, int msg_id = 0)
+{
+    auto item    = new QTableWidgetItem;
+
+    resultsTable->insertRow(idx);
+
+    /* payload */
+    item->setText(message.toStringPayload());
+    resultsTable->setItem(idx, RESULT_PAYLD_COL, item);
+
+    /* index */
+    item = new QTableWidgetItem;
+    item->setText(QString::number( msg_id ));
+    resultsTable->setItem(idx, RESULT_INDEX_COL, item);
+
+    /* ecuid */
+    item = new QTableWidgetItem;
+    item->setText(message.getEcuid());
+    resultsTable->setItem(idx, RESULT_ECUID_COL, item);
+
+    /* apid */
+    item = new QTableWidgetItem;
+    item->setText(message.getApid());
+    resultsTable->setItem(idx, RESULT_APPID_COL, item);
+
+    /* ctid */
+    item = new QTableWidgetItem;
+    item->setText(message.getCtid());
+    resultsTable->setItem(idx, RESULT_CTXID_COL, item);
+
+    return item;
+}
 
 void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item, int column)
 {
@@ -297,38 +336,12 @@ void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item
 
         for (int idx = 0; idx < numResults; idx++)
         {
-            auto item    = new QTableWidgetItem;
             auto msg_idx = results->second.at(idx);
             QDltMsg message;
 
             /* get message from file and insert it in the table */
             dltFile->getMsg(msg_idx, message);
-            resultsTable->insertRow(idx);
-
-            /* payload */
-            item->setText(message.toStringPayload());
-            resultsTable->setItem(idx, 4, item);
-
-            /* index */
-            item = new QTableWidgetItem;
-            item->setText(QString::number(msg_idx));
-            resultsTable->setItem(idx, 0, item);
-
-
-            /* ecuid */
-            item = new QTableWidgetItem;
-            item->setText(message.getEcuid());
-            resultsTable->setItem(idx, 1, item);
-
-            /* apid */
-            item = new QTableWidgetItem;
-            item->setText(message.getApid());
-            resultsTable->setItem(idx, 2, item);
-
-            /* ctid */
-            item = new QTableWidgetItem;
-            item->setText(message.getCtid());
-            resultsTable->setItem(idx, 3, item);
+            insertResultRow(resultsTable, message, idx, msg_idx);
         }
 
         resultsTable->setFocus();
@@ -345,62 +358,35 @@ void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item
         /* Get .dlt file content for current index */
         auto dltFile      = results->first;
 
-        {/*  */
-            QTableWidgetItem* ourItem = nullptr;
-            long ourItemIndex = 0;
-            long result_idx   = results->second.at(childIndex);
-            long msgNumber    = dltFile->getFileMsgNumber();
-            long start        = result_idx - 100;
-            long end          = result_idx + 100;
+        QTableWidgetItem* ourItem = nullptr;
+        long ourItemIndex = 0;
+        long result_idx   = results->second.at(childIndex);
+        long msgNumber    = dltFile->getFileMsgNumber();
+        long start        = result_idx - 100;
+        long end          = result_idx + 100;
 
-            start = (start >= 0)?start:0;
-            end   = (end <= msgNumber)?end:msgNumber;
+        start = (start >= 0)?start:0;
+        end   = (end <= msgNumber)?end:msgNumber;
 
-            for (long idx = 0, msg_idx = start; msg_idx < end; idx++, msg_idx++)
+        for (long idx = 0, msg_idx = start; msg_idx < end; idx++, msg_idx++)
+        {
+            QTableWidgetItem* item;
+            QDltMsg message;
+
+            dltFile->getMsg(msg_idx, message);
+            item = insertResultRow(resultsTable, message, idx, msg_idx);
+
+            if (result_idx == msg_idx)
             {
-                auto item = new QTableWidgetItem;
-                QDltMsg message;
-
-                dltFile->getMsg(msg_idx, message);
-                resultsTable->insertRow(idx);
-
-                /* payload */
-                item->setText(message.toStringPayload());
-                resultsTable->setItem(idx, 4, item);
-
-                /* index */
-                item = new QTableWidgetItem;
-                item->setText(QString::number(msg_idx));
-                resultsTable->setItem(idx, 0, item);
-
-
-                /* ecuid */
-                item = new QTableWidgetItem;
-                item->setText(message.getEcuid());
-                resultsTable->setItem(idx, 1, item);
-
-                /* apid */
-                item = new QTableWidgetItem;
-                item->setText(message.getApid());
-                resultsTable->setItem(idx, 2, item);
-
-                /* ctid */
-                item = new QTableWidgetItem;
-                item->setText(message.getCtid());
-                resultsTable->setItem(idx, 3, item);
-
-                if (result_idx == msg_idx)
-                {
-                    ourItem      = item;
-                    ourItemIndex = idx;
-                }
+                ourItem      = item;
+                ourItemIndex = idx;
             }
-
-            /* Scroll to message idx: at(childIndex) */
-            resultsTable->setFocus();
-            resultsTable->scrollToItem(ourItem, QAbstractItemView::PositionAtCenter);
-            resultsTable->setRangeSelected({ourItemIndex, 0, ourItemIndex, 4}, true);
         }
+
+        /* Scroll to message idx: at(childIndex) */
+        resultsTable->setFocus();
+        resultsTable->scrollToItem(ourItem, QAbstractItemView::PositionAtCenter);
+        resultsTable->setRangeSelected({ourItemIndex, 0, ourItemIndex, 4}, true);
     }
 }
 
