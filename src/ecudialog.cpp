@@ -21,6 +21,8 @@
 #include "ui_ecudialog.h"
 
 #include <QSerialPort>
+#include <QSerialPortInfo>
+#include <QNetworkInterface>
 
 EcuDialog::EcuDialog(QWidget *parent) :
     QDialog(parent),
@@ -158,6 +160,10 @@ QString EcuDialog::mcastaddress()
     return  ui->comboBoxUDP_mcastaddress->currentText();
 }
 
+QString EcuDialog::serialPort()
+{
+    return  ui->comboBoxPortSerial->currentText();
+}
 
 unsigned int EcuDialog::port()
 {
@@ -189,20 +195,6 @@ unsigned int EcuDialog::udpport()
 QString EcuDialog::EthInterface()
 {
     return  ui->comboBoxNetworkIF->currentText();
-}
-
-QString EcuDialog::Serialport()
-{
-    QRegExp rx("^(com|COM)\\d\\d*$");    // matches from COM0 to COM99
-    if(ui->comboBoxPortSerial->currentText().contains(rx))
-    {
-        QString str = "\\\\.\\";
-        return str.append(ui->comboBoxPortSerial->currentText());
-    }
-    else
-    {
-        return  ui->comboBoxPortSerial->currentText();
-    }
 }
 
 QSerialPort::BaudRate EcuDialog::baudrate()
@@ -282,10 +274,18 @@ void EcuDialog::setHostnameList(QStringList hostnames)
     ui->comboBoxHostname->addItems(hostnames);
 }
 
-void EcuDialog::setSerialPortList(QStringList ports)
+void EcuDialog::setSerialPortList()
 {
     ui->comboBoxPortSerial->clear();
-    ui->comboBoxPortSerial->addItems(ports);
+
+    QList<QSerialPortInfo> 	availablePorts  = QSerialPortInfo::availablePorts();
+    qDebug() << "portName" << "description" << "manufacturer" << "serialNumber" << "productIdentifier" << "vendorIdentifier" << "systemLocation";
+    for(int num = 0; num<availablePorts.length();num++)
+    {
+        qDebug() << availablePorts[num].portName() << availablePorts[num].description() << availablePorts[num].manufacturer() << availablePorts[num].serialNumber() << availablePorts[num].productIdentifier() << availablePorts[num].vendorIdentifier() << availablePorts[num].systemLocation();
+        ui->comboBoxPortSerial->addItem(availablePorts[num].portName());
+    }
+
 }
 
 void EcuDialog::setIPPortList(QStringList ports)
@@ -300,11 +300,16 @@ void EcuDialog::setUDPPortList(QStringList ports)
     ui->comboBoxPortIP_UDP->addItems(ports);
 }
 
-void EcuDialog::setNetworkIFList(QStringList ifnames, QString lastsetting)
+void EcuDialog::setNetworkIFList(QString lastsetting)
 {
     ui->comboBoxNetworkIF->clear();
-    ui->comboBoxNetworkIF->addItems(ifnames);
-    ui->comboBoxNetworkIF->setCurrentIndex(ifnames.indexOf(lastsetting));
+    QList<QNetworkInterface> 	interfaces  = QNetworkInterface::allInterfaces();;
+    for(int num = 0; num<interfaces.length();num++)
+    {
+        if(interfaces[num].type()!=1)
+           ui->comboBoxNetworkIF->addItem(interfaces[num].humanReadableName());
+    }
+    ui->comboBoxNetworkIF->setCurrentText(lastsetting);
 }
 
 void EcuDialog::setMulticastAddresses(QStringList mcaddresses)
@@ -324,7 +329,7 @@ void EcuDialog::setDialogToEcuItem(EcuItem *item)
     item->setUdpport(this->udpport());
     item->setEthIF(this->EthInterface());
     item->setmcastIP(this->mcastaddress());
-    item->setPort(this->Serialport());
+    item->setPort(ui->comboBoxPortSerial->currentText());
     item->setBaudrate(this->baudrate());
     item->loglevel = this->loglevel();
     item->tracestatus = this->tracestatus();
@@ -343,7 +348,7 @@ void EcuDialog::setDialogToEcuItem(EcuItem *item)
     item->ipcon.setPort(this->port());
     item->ipcon.setHostname(this->hostname());
     item->serialcon.setBaudrate(this->baudrate());
-    item->serialcon.setPort(this->Serialport());
+    item->serialcon.setPort(ui->comboBoxPortSerial->currentText());
     item->setSendSerialHeaderSerial(this->ui->checkBoxSendSerialHeaderSerial->checkState()==Qt::Checked);
     item->setSyncSerialHeaderSerial(this->ui->checkBoxSyncToSerialHeaderSerial->checkState()==Qt::Checked);
 }

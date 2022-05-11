@@ -42,6 +42,7 @@
 #include "exporterdialog.h"
 #include "searchtablemodel.h"
 #include "searchinfilesdialog.h"
+#include "sortfilterproxymodel.h"
 #include "ui_mainwindow.h"
 
 
@@ -203,7 +204,6 @@ private:
     enum { MaxRecentHostnames = 10 };
     QStringList recentHostnames;
     enum { MaxRecentPorts = 10 };
-    QStringList recentSerialPorts;
     QStringList recentIPPorts;
     QStringList recentUDPPorts;
     QString recentEthIF;
@@ -237,6 +237,9 @@ private:
     QString target_version_string;
 
     QList<unsigned long int> selectedMarkerRows;
+
+    /**/
+    SortFilterProxyModel *sortProxyModel;
 
     /* functions called in constructor */
     void initState();
@@ -299,7 +302,7 @@ private:
     void updateIndex();
     void drawUpdatedView();
 
-     void syncCheckBoxesAndMenu();
+    void syncCheckBoxesAndMenu();
 
     void updateRecentFileActions();
     void setCurrentFile(const QString &fileName);
@@ -316,7 +319,6 @@ private:
 
     void setCurrentHostname(const QString &hostName);
     void setCurrentMCAddress(const QString &mcastaddress);
-    void setCurrentSerialPort(const QString &portName);
     void setCurrentIPPort(const QString &portName);
     void setCurrentUDPPort(const QString &portName);
     void setCurrentEthIF(const QString &EthIfName);
@@ -567,6 +569,10 @@ private slots:
     void on_actionSort_By_Timestamp_triggered(bool checked);
 
     void on_exploreView_activated(const QModelIndex &index);
+
+    void on_comboBoxExplorerSortType_currentIndexChanged(int index);
+
+    void on_comboBoxExplorerSortOrder_currentIndexChanged(int index);
 
 public slots:
 

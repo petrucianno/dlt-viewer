@@ -220,6 +220,7 @@ MainWindow::~MainWindow()
     delete m_shortcut_searchnext;
     delete m_shortcut_searchprev;
     delete newCompleter;
+    delete sortProxyModel;
 }
 
 
@@ -333,17 +334,22 @@ void MainWindow::initView()
     /* sort dir entries */
     ui->exploreView->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    SortFilterProxyModel *sortProxyModel = new SortFilterProxyModel(this);
+    sortProxyModel = new SortFilterProxyModel(this);
     sortProxyModel->setSourceModel(model);
 
     ui->exploreView->setModel(sortProxyModel);
     ui->exploreView->setSortingEnabled(true);
+    ui->exploreView->sortByColumn(0, Qt::AscendingOrder);
 
     ui->exploreView->hideColumn(1);
     ui->exploreView->hideColumn(2);
     ui->exploreView->hideColumn(3);
 
-    ui->exploreView->setAutoExpandDelay(10);
+    if (recentFiles.size() > 0)
+    {
+        ui->exploreView->scrollTo(
+                    sortProxyModel->mapFromSource(model->index(recentFiles[0])));
+    }
 
     /* Enable column sorting of config widget */
     ui->configWidget->sortByColumn(0, Qt::AscendingOrder); // column/order to sort by
@@ -2281,16 +2287,15 @@ void MainWindow::on_action_menuConfig_ECU_Add_triggered()
     QStringList SerialportListPreset = getAvailableSerialPorts();
     QStringList IPportListPreset = getAvailableIPPorts();
     QStringList UDPportListPreset = getAvailableUDPPorts();
-    QStringList NetworkIFListPreset = getAvailableNetworkInterfaces();
 
     /* show ECU configuration dialog */
     EcuDialog dlg;
     EcuItem initItem;
+    dlg.setSerialPortList();
     dlg.setData(initItem);
 
     /* Read settings for recent hostnames and ports */
     recentHostnames = QDltSettingsManager::getInstance()->value("other/recentHostnameList",hostnameListPreset).toStringList();
-    recentSerialPorts = QDltSettingsManager::getInstance()->value("other/recentSerialPortList",SerialportListPreset).toStringList();
     recentIPPorts = QDltSettingsManager::getInstance()->value("other/recentIPPortList",IPportListPreset).toStringList();
     recentUDPPorts = QDltSettingsManager::getInstance()->value("other/recentUDPPortList",UDPportListPreset).toStringList();
     recentEthIF = QDltSettingsManager::getInstance()->value("other/recentEthernetInterface").toString();
@@ -2302,10 +2307,9 @@ void MainWindow::on_action_menuConfig_ECU_Add_triggered()
     dlg.setIFpresetindex(i_iftypeindex);
     dlg.setMulticast(b_mcastpreset);
     dlg.setHostnameList(recentHostnames);
-    dlg.setSerialPortList(recentSerialPorts);
     dlg.setIPPortList(recentIPPorts);
     dlg.setUDPPortList(recentUDPPorts);
-    dlg.setNetworkIFList(NetworkIFListPreset,recentEthIF);
+    dlg.setNetworkIFList(recentEthIF);
     dlg.setMulticastAddresses(recent_multicastAddresses);
 
     if ( ( 1 == settings->autoConnect ) &&
@@ -2337,7 +2341,6 @@ void MainWindow::on_action_menuConfig_ECU_Add_triggered()
        setCurrentMCAddress(ecuitem->getmcastIP()); // store it in the settings file
        setCurrentHostname(ecuitem->getHostname());
        setCurrentEthIF(ecuitem->getEthIF());
-       setCurrentSerialPort(ecuitem->getPort());
        setCurrentIPPort(QString("%1").arg(ecuitem->getIpport()));
        setCurrentUDPPort(QString("%1").arg(ecuitem->getUdpport()));
        setMcast(ecuitem->is_multicast);
@@ -2369,11 +2372,11 @@ void MainWindow::on_action_menuConfig_ECU_Edit_triggered()
 
         /* show ECU configuration dialog */
         EcuDialog dlg;
+        dlg.setSerialPortList();
         dlg.setData(*ecuitem);
 
         /* Read settings for recent hostnames and ports */
         recentHostnames = QDltSettingsManager::getInstance()->value("other/recentHostnameList",hostnameListPreset).toStringList();
-        recentSerialPorts = QDltSettingsManager::getInstance()->value("other/recentSerialPortList",SerialportListPreset).toStringList();
         recentIPPorts= QDltSettingsManager::getInstance()->value("other/recentIPPortList",IPportListPreset).toStringList();
         recentUDPPorts= QDltSettingsManager::getInstance()->value("other/recentUDPPortList",UDPportListPreset).toStringList();
         recentEthIF = QDltSettingsManager::getInstance()->value("other/recentEthernetInterface").toString();
@@ -2381,9 +2384,6 @@ void MainWindow::on_action_menuConfig_ECU_Edit_triggered()
 
         // Ethernet IF
         setCurrentHostname(ecuitem->getHostname());
-
-        //serial Port
-        setCurrentSerialPort(ecuitem->getPort());
 
         // IP port
         setCurrentIPPort(QString("%1").arg(ecuitem->getIpport()));
@@ -2393,10 +2393,9 @@ void MainWindow::on_action_menuConfig_ECU_Edit_triggered()
         setCurrentEthIF(ecuitem->getEthIF());
 
         dlg.setHostnameList(recentHostnames);
-        dlg.setSerialPortList(recentSerialPorts);
         dlg.setIPPortList(recentIPPorts);
         dlg.setUDPPortList(recentUDPPorts);
-        dlg.setNetworkIFList(NetworkIFListPreset,ecuitem->getEthIF());
+        dlg.setNetworkIFList(ecuitem->getEthIF());
         dlg.setMulticastAddresses(recent_multicastAddresses);
 
         if(dlg.exec())
@@ -2408,7 +2407,7 @@ void MainWindow::on_action_menuConfig_ECU_Edit_triggered()
                 ecuitem->getUdpport() != dlg.udpport() ||
                 ecuitem->getEthIF() != dlg.EthInterface() ||
                 ecuitem->getmcastIP() != dlg.mcastaddress() ||
-                ecuitem->getPort() != dlg.Serialport() ||
+                ecuitem->getPort() != dlg.serialPort() ||
                 ecuitem->is_multicast != dlg.getMulticast() ||
                 ecuitem->getBaudrate() != dlg.baudrate()) &&
                 ecuitem->tryToConnect)
@@ -2438,7 +2437,6 @@ void MainWindow::on_action_menuConfig_ECU_Edit_triggered()
             setCurrentHostname(ecuitem->getHostname());
             setCurrentMCAddress(ecuitem->getmcastIP()); // store it in the settings file
 //tbd save is muticast
-            setCurrentSerialPort(ecuitem->getPort());
             setCurrentIPPort(QString("%1").arg(ecuitem->getIpport()));
             setCurrentUDPPort(QString("%1").arg(ecuitem->getUdpport()));
             setCurrentEthIF(ecuitem->getEthIF());
@@ -3241,22 +3239,37 @@ void MainWindow::connectECU(EcuItem* ecuitem,bool force)
                  ecuitem->udpsocket.setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption,26214400);
                  ecuitem->tryToConnect = true;
                  if (  ecuitem->is_multicast == true )
-                    {
-                     if ( true == ecuitem->udpsocket.joinMulticastGroup(ecuitem->getmcastIP(), ecuitem->getEthIF()) )
-                       {
-                        qDebug() << "Successfully joined multicast group" << ecuitem->getmcastIP() << "on interface" << ecuitem->getEthIF();
-                       }
-                     else // setting up multicast failed
+                 {
+                     QList<QNetworkInterface> 	interfaces  = QNetworkInterface::allInterfaces();
+                     int num;
+                     for(num=0;num<interfaces.length();num++)
                      {
-                      ecuitem->connected = false; // unicast socket setup was ok
-                      ecuitem->connectError.append("Error joining multicast group");
-                      qDebug() << "Error joining multicast group" << ecuitem->getmcastIP() << "on interface" << ecuitem->getEthIF() << ecuitem->socket->errorString();
+                         if(interfaces[num].humanReadableName()==ecuitem->getEthIF())
+                         {
+                             if ( true == ecuitem->udpsocket.joinMulticastGroup(QHostAddress(ecuitem->getmcastIP()), interfaces[num]) )
+                             {
+                                qDebug() << "Successfully joined multicast group" << ecuitem->getmcastIP() << "on interface" << ecuitem->getEthIF();
+                             }
+                             else // setting up multicast failed
+                             {
+                                ecuitem->connected = false; // unicast socket setup was ok
+                                ecuitem->connectError.append("Error joining multicast group");
+                                qDebug() << "Error joining multicast group" << ecuitem->getmcastIP() << "on interface" << ecuitem->getEthIF() << ecuitem->socket->errorString();
+                             }
+                             break;
+                         }
                      }
-                    } // multicast
-                  else // unicast case
-                   {
+                     if(num==interfaces.length())
+                     {
+                         ecuitem->connected = false; // unicast socket setup was ok
+                         ecuitem->connectError.append("Interface not found");
+                         qDebug() << "Error joining multicast group" << ecuitem->getmcastIP() << "on interface" << ecuitem->getEthIF() << ecuitem->socket->errorString();
+                     }
+                 } // multicast
+                 else // unicast case
+                 {
                      qDebug() <<  "UDP unicast configured to" << ecuitem->getEthIF();
-                   }
+                 }
 
                  connect(ecuitem->socket,SIGNAL(connected()),this,SLOT(connected()));
                  connect(ecuitem->socket,SIGNAL(disconnected()),this,SLOT(disconnected()));
@@ -3587,7 +3600,7 @@ void MainWindow::read(EcuItem* ecuitem)
           ecuitem->ipcon.add(data);
           break;
       case EcuItem::INTERFACETYPE_UDP:
-          if(ecuitem->udpsocket.hasPendingDatagrams())
+          while(ecuitem->udpsocket.hasPendingDatagrams())
           {
             data.resize(ecuitem->udpsocket.pendingDatagramSize());
             bytesRcvd = ecuitem->udpsocket.readDatagram( data.data(), data.size() );
@@ -4276,6 +4289,18 @@ void MainWindow::controlMessage_SendControlMessage(EcuItem* ecuitem,DltMessage &
         ecuitem->m_serialport->write((const char*)msg.headerbuffer+sizeof(DltStorageHeader),msg.headersize-sizeof(DltStorageHeader));
         ecuitem->m_serialport->write((const char*)msg.databuffer,msg.datasize);
     }
+    else if (ecuitem->interfacetype == EcuItem::INTERFACETYPE_SERIAL_ASCII && ecuitem->m_serialport && ecuitem->m_serialport->isOpen())
+    {
+        /* In SERIAL_ASCII mode we send only user input */
+        if (appid == "SER" && contid == "CON") {
+            ecuitem->m_serialport->write((const char*)(msg.databuffer+8),(msg.datasize-8));
+            ecuitem->m_serialport->write("\r\n");
+        }
+        else
+        {
+        return;
+        }
+    }
     else
     {
         /* ECU is not connected */
@@ -4763,6 +4788,13 @@ void MainWindow::SendInjection(EcuItem* ecuitem)
     bool ok = true;
 
     qDebug() << "DLT SendInjection" << injectionAplicationId << injectionContextId << injectionServiceId << __LINE__;
+
+    if (ecuitem->interfacetype == EcuItem::INTERFACETYPE_SERIAL_ASCII)
+    {
+        injectionAplicationId = "SER";
+        injectionContextId    = "CON";
+        injectionServiceId    = "9999";
+    }
 
     if (injectionAplicationId.isEmpty() || injectionContextId.isEmpty() || injectionServiceId.isEmpty() )
     {
@@ -5540,17 +5572,6 @@ void MainWindow::setCurrentEthIF(const QString &EthIfName)
     QDltSettingsManager::getInstance()->setValue("other/recentEthernetInterface",EthIfName);
 }
 
-
-void MainWindow::setCurrentSerialPort(const QString &portName)
-{
-    recentSerialPorts.removeAll(portName);
-    recentSerialPorts.prepend(portName);
-    while (recentSerialPorts.size() > MaxRecentPorts)
-        recentSerialPorts.removeLast();
-
-    /* Write settings for recent ports */
-    QDltSettingsManager::getInstance()->setValue("other/recentSerialPortList",recentSerialPorts);
-}
 
 void MainWindow::setCurrentIPPort(const QString &portName)
 {
@@ -6669,26 +6690,52 @@ void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
     QMenu menu(ui->exploreView);
     QAction *action;
     /* Get path from index */
-    auto index   = ui->exploreView->selectionModel()->selectedIndexes()[0];
-    auto path    = getPathFromExplorerViewIndexModel(index);
-    bool is_file = !QDir(path).exists();
+    auto indexes   = ui->exploreView->selectionModel()->selectedIndexes();
+    auto index     = indexes[0];
+    auto path      = getPathFromExplorerViewIndexModel(index);
+    bool is_file   = !QDir(path).exists();
 
     if (is_file)
     {
-        action = new QAction("&Load", this);
-         connect(action, &QAction::triggered, this, [this](){
-             auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
-             on_exploreView_activated(index);
-         });
+        action = new QAction("&Load selected", this);
+        connect(action, &QAction::triggered, this, [this, indexes](){
+            QStringList  pathsList;
+            auto selectedIndexes = indexes;
+
+            for (auto &index : selectedIndexes)
+            {
+               if (0 == index.column())
+               {
+                   QString path = getPathFromExplorerViewIndexModel(index);
+
+                   if (path.toLower().endsWith(".dlt"))
+                   {
+                       pathsList.append(path);
+                   }
+               }
+            }
+
+            if (!pathsList.isEmpty())
+            {
+                openDltFile(pathsList);
+                outputfileIsTemporary = false;
+            }
+            else
+            {
+                QMessageBox msgBox(QMessageBox::Warning, "Warning", "No dlt files in current selection", QMessageBox::Close);
+                msgBox.exec();
+            }
+        });
+
         menu.addAction(action);
 
-        if (!path.toLower().endsWith(".dlp"))
+        if ((!path.toLower().endsWith(".dlp")) && (5 > indexes.size()))
         {
-            if (path.toLower().endsWith(".dlt"))
+            if ((path.toLower().endsWith(".dlt")))
             {
                 action = new QAction("&Open in new instance", this);
-                connect(action, &QAction::triggered, this, [this](){
-                    auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
+                connect(action, &QAction::triggered, this, [this, indexes](){
+                    auto index = indexes[0];
                     auto path = getPathFromExplorerViewIndexModel(index);
                     QProcess process;
                     process.setProgram(QCoreApplication::applicationFilePath());
@@ -6702,8 +6749,8 @@ void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
             }
 
             action = new QAction("&Append", this);
-            connect(action, &QAction::triggered, this, [this](){
-                auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
+            connect(action, &QAction::triggered, this, [this, indexes](){
+                auto index = indexes[0];
                 auto path  = getPathFromExplorerViewIndexModel(index);
                 if (path.toLower().endsWith(".dlt"))
                     appendDltFile(path);
@@ -6729,7 +6776,7 @@ void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
         menu.addAction(action);
 
 
-        
+
 #endif
 		action = new QAction("&Find in files", this);
 
@@ -6741,11 +6788,10 @@ void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
             searchInFilesDialog->show();
         });
         menu.addAction(action);
-        
+
         action = new QAction("Open all files", this);
-        //action->setEnabled(false);
-        connect(action, &QAction::triggered, this, [this](){
-            auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
+        connect(action, &QAction::triggered, this, [this, indexes](){
+            auto index = indexes[0];
             auto path  = getPathFromExplorerViewIndexModel(index);
 
             QStringList  files;
@@ -6756,22 +6802,29 @@ void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
                 files.append(it_sh.next());
             }
 
-            auto start = QDateTime::currentMSecsSinceEpoch();
-            openDltFile(files); 
+            openDltFile(files);
             outputfileIsTemporary = false;
         });
         menu.addAction(action);
     }
+    menu.addAction(action);
     menu.addSeparator();
 
-    action = new QAction("&Copy path", this);
-    connect(action, &QAction::triggered, this, [this](){
+    action = new QAction("&Copy paths", this);
+    connect(action, &QAction::triggered, this, [this, indexes](){
         QClipboard *clipboard = QGuiApplication::clipboard();
-        auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
-        auto path  = getPathFromExplorerViewIndexModel(index);
-        clipboard->setText(path);
-        qDebug() << "Copy path - triggered" << path;
 
+        QStringList clipboardText;
+        for (auto & index : indexes)
+        {
+            if (0 == index.column())
+            {
+                auto path  = getPathFromExplorerViewIndexModel(index);
+                clipboardText += path;
+            }
+        }
+
+        clipboard->setText(clipboardText.join("\n"));
     });
     menu.addAction(action);
     menu.addSeparator();
@@ -7708,6 +7761,34 @@ void MainWindow::on_exploreView_activated(const QModelIndex &index)
         openDlpFile(path);
         break;
     default:
+        break;
+    }
+}
+
+void MainWindow::on_comboBoxExplorerSortType_currentIndexChanged(int index)
+{
+    switch (index)
+    {
+    case 1:
+        sortProxyModel->changeSortingType(SortFilterProxyModel::SortType::TIMESTAMP);
+        break;
+    case 0:
+    default:
+        sortProxyModel->changeSortingType(SortFilterProxyModel::SortType::ALPHABETICALLY);
+        break;
+    }
+}
+
+void MainWindow::on_comboBoxExplorerSortOrder_currentIndexChanged(int index)
+{
+    switch (index)
+    {
+    case 1:
+        sortProxyModel->changeSortingOrder(Qt::DescendingOrder);
+        break;
+    case 0:
+    default:
+        sortProxyModel->changeSortingOrder(Qt::AscendingOrder);
         break;
     }
 }
