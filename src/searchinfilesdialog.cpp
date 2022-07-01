@@ -3,7 +3,7 @@
 #include <QCheckBox>
 #include <QMenu>
 #include <QAction>
-
+#include <QMessageBox>
 #include <QDateTime>
 
 #include "ui_searchinfilesdialog.h"
@@ -148,20 +148,25 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
 
 SearchInFilesDialog::~SearchInFilesDialog()
 {
+    m_indexing = false;
+    m_indexingMutex.lock(); /* In order to avoid destroing of locked mutex */
+    m_indexingMutex.unlock();
+
     delete ui;
 }
 
-void SearchInFilesDialog::setFolder(const QString &path)
+SearchInFilesDialog* SearchInFilesDialog::setFolder(const QString &path)
 {
     m_currentPath = path;
     ui->directoryTextBox->setText(m_currentPath);
+
+    return this;
 }
 
 void SearchInFilesDialog::dltFilesOpened(const QStringList &files)
 {
 (void)files;
 }
-
 
 void SearchInFilesDialog::on_buttonSearch_clicked()
 {
@@ -179,10 +184,7 @@ void SearchInFilesDialog::on_buttonSearch_clicked()
     {
         QDltFilterList filters;
         QTableWidget  *table = ui->tableWidgetPatterns;
-        QDirIterator   it_sh(m_currentPath, QStringList() << "*.dlt", QDir::Files, QDirIterator::Subdirectories);
-        QStringList    files;
         QStringList    expressions;
-
 
         /* Compose search query based on Patterns Table */
         for (int i = 0; i < table->rowCount(); i++)
@@ -211,25 +213,19 @@ void SearchInFilesDialog::on_buttonSearch_clicked()
             return;
         }
 
-        while (it_sh.hasNext())
+        if (m_files.size() > 0)
         {
-            files.append(it_sh.next());
+            multiFileSearcher->search(m_files, std::move(expressions.join("|")));
         }
-        std::sort(files.begin(), files.end(), [](QString&l, QString&r){
-            int l_f = QDir::toNativeSeparators(l).count(QDir::separator());;
-            int r_f = QDir::toNativeSeparators(r).count(QDir::separator());;
-            return l_f < r_f;
-        });
-
-        if (files.size() > 0)
-            multiFileSearcher->search(files, std::move(expressions.join("|")));
         else
         {
-            /* dialog: no .dlt files found in folder */
+            QMessageBox warning(QMessageBox::Warning,
+                                "Warning", "No dlt files in selected directory",
+                                QMessageBox::Ok);
+            warning.exec();
         }
     }
 }
-
 
 void SearchInFilesDialog::on_buttonCancel_clicked()
 {
@@ -243,7 +239,6 @@ void SearchInFilesDialog::on_buttonCancel_clicked()
         close();
     }
 }
-
 
 void SearchInFilesDialog::on_buttonAddPattern_clicked()
 {
@@ -282,6 +277,40 @@ void SearchInFilesDialog::on_buttonRemovePattern_clicked()
 void SearchInFilesDialog::on_directoryTextBox_textChanged(const QString &arg1)
 {
     m_currentPath = arg1;
+
+    if (QDir(m_currentPath).exists())
+    {
+        m_indexing = false;
+
+        QThreadPool::globalInstance()->start([this](){
+            m_indexingMutex.lock();
+
+            QDirIterator dir_it(m_currentPath, QStringList() << "*.dlt", QDir::Files, QDirIterator::Subdirectories);
+            int total_files = 0;
+
+            m_files.clear();
+            ui->buttonSearch->setEnabled(false);
+            ui->buttonSearch->setText("Indexing files");
+
+            m_indexing = true;
+
+            while (dir_it.hasNext() && m_indexing)
+            {
+                m_files.append(dir_it.next());
+                total_files++;
+            }
+
+            if (!m_indexing)
+            {
+                qDebug() << "Indexing interrupted";
+            }
+
+            ui->buttonSearch->setEnabled(true);
+            ui->buttonSearch->setText("Search");
+
+            m_indexingMutex.unlock();
+        });
+    }
 }
 
 
@@ -416,7 +445,6 @@ void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item
     }
 }
 
-
 void SearchInFilesDialog::on_treeWidgetResults_customContextMenuRequested(const QPoint &pos)
 {
     if (multiFileSearcher->getResults().size() <= 0)
@@ -446,7 +474,6 @@ void SearchInFilesDialog::on_treeWidgetResults_customContextMenuRequested(const 
     menu.exec(resultsTree->mapToGlobal(pos));
 }
 
-
 void SearchInFilesDialog::on_pushButtonSelectAll_clicked()
 {
     auto resultsTree = ui->treeWidgetResults;
@@ -458,7 +485,6 @@ void SearchInFilesDialog::on_pushButtonSelectAll_clicked()
     }
 }
 
-
 void SearchInFilesDialog::on_pushButtonDeselectAll_clicked()
 {
     auto resultsTree = ui->treeWidgetResults;
@@ -469,7 +495,6 @@ void SearchInFilesDialog::on_pushButtonDeselectAll_clicked()
         resultsTree->topLevelItem(i)->setCheckState(0, Qt::Unchecked);
     }
 }
-
 
 void SearchInFilesDialog::on_pushButtonOpenSelected_clicked()
 {
@@ -490,4 +515,3 @@ void SearchInFilesDialog::on_pushButtonOpenSelected_clicked()
 
     emit openDltFiles(files);
 }
-

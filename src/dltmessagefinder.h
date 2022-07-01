@@ -40,17 +40,21 @@ public:
     T at(int idx)
     {
         T el;
+
         lock.lockForRead();
         el = list.at(idx);
         lock.unlock();
+
         return el;
     }
     int size()
     {
         int size = 0;
+
         lock.lockForRead();
         size = list.size();
         lock.unlock();
+
         return size;
     }
     void clear()
@@ -149,6 +153,7 @@ public:
     static DltMessageFinder* getInstance(QObject *parent = nullptr);
 
     void search(QStringList &paths, const QString &&expression);
+    void search(QSharedPointer<QDirIterator> it_files, const QString &&expression);
     void cancelSearch(bool full_stop = true);
     bool isRunning()
     {

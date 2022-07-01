@@ -3,6 +3,8 @@
 
 #include <QDialog>
 #include <QTreeWidgetItem>
+#include <QAtomicInteger>
+#include <QMutex>
 
 #include "dltmessagefinder.h"
 
@@ -15,15 +17,18 @@ class SearchInFilesDialog : public QDialog
     Q_OBJECT
 
     Ui::SearchInFilesDialog *ui;
-    DltMessageFinder *multiFileSearcher;
-    QString m_currentPath;
-    long totalMatches = 0;
-    QTreeWidgetItem tree_results;
+    DltMessageFinder    *multiFileSearcher;
+    QString              m_currentPath;
+    QTreeWidgetItem      tree_results;
+    QStringList          m_files;
+    QAtomicInteger<bool> m_indexing;
+    QMutex               m_indexingMutex;
+    long                 totalMatches = 0;
 
 public:
     explicit SearchInFilesDialog(QWidget *parent = nullptr);
     ~SearchInFilesDialog();
-    void setFolder(const QString& path);
+    SearchInFilesDialog* setFolder(const QString &path);
 
 signals:
     void openDltFiles(const QStringList& files);

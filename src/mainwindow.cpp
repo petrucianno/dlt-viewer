@@ -480,6 +480,7 @@ void MainWindow::initSignalConnections()
 
     // connect file loaded signal with  explorerView
     connect(this, &MainWindow::dltFileLoaded, this, [this](const QStringList& paths){
+        Q_UNUSED(paths);
         QSortFilterProxyModel*   proxyModel = reinterpret_cast<QSortFilterProxyModel*>(ui->exploreView->model());
         QFileSystemModel*        fsModel    = reinterpret_cast<QFileSystemModel*>(proxyModel->sourceModel());
         ui->exploreView->scrollTo(
@@ -6784,8 +6785,7 @@ void MainWindow::on_exploreView_customContextMenuRequested(QPoint pos)
             auto index = ui->exploreView->selectionModel()->selectedIndexes()[0];
             auto path  = getPathFromExplorerViewIndexModel(index);
 
-            searchInFilesDialog->setFolder(path);
-            searchInFilesDialog->show();
+            searchInFilesDialog->setFolder(path)->show();
         });
         menu.addAction(action);
 
