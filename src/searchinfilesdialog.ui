@@ -47,9 +47,6 @@
           <property name="enabled">
            <bool>false</bool>
           </property>
-          <property name="text">
-           <string/>
-          </property>
          </widget>
         </item>
        </layout>
@@ -84,7 +81,7 @@
       <bool>true</bool>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tabSearch">
       <attribute name="title">
@@ -318,83 +315,122 @@
              </layout>
             </item>
             <item>
-             <widget class="QTableWidget" name="tableWidgetResults">
-              <property name="sizeAdjustPolicy">
-               <enum>QAbstractScrollArea::AdjustToContents</enum>
+             <layout class="QVBoxLayout" name="verticalLayout_8">
+              <property name="leftMargin">
+               <number>0</number>
               </property>
-              <property name="editTriggers">
-               <set>QAbstractItemView::NoEditTriggers</set>
+              <property name="topMargin">
+               <number>0</number>
               </property>
-              <property name="selectionMode">
-               <enum>QAbstractItemView::ExtendedSelection</enum>
-              </property>
-              <property name="selectionBehavior">
-               <enum>QAbstractItemView::SelectRows</enum>
-              </property>
-              <property name="textElideMode">
-               <enum>Qt::ElideNone</enum>
-              </property>
-              <property name="horizontalScrollMode">
-               <enum>QAbstractItemView::ScrollPerPixel</enum>
-              </property>
-              <attribute name="horizontalHeaderDefaultSectionSize">
-               <number>50</number>
-              </attribute>
-              <attribute name="horizontalHeaderStretchLastSection">
-               <bool>false</bool>
-              </attribute>
-              <attribute name="verticalHeaderVisible">
-               <bool>false</bool>
-              </attribute>
-              <attribute name="verticalHeaderMinimumSectionSize">
-               <number>15</number>
-              </attribute>
-              <attribute name="verticalHeaderDefaultSectionSize">
-               <number>20</number>
-              </attribute>
-              <row>
-               <property name="text">
-                <string>New Row</string>
-               </property>
-              </row>
-              <column>
-               <property name="text">
-                <string>Index</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>Time</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>Timestamp</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>ECUId</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>AppId</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>CtId</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>Payload</string>
-               </property>
-              </column>
-             </widget>
+              <item>
+               <widget class="QLabel" name="labelResultFileName">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QTableWidget" name="tableWidgetResults">
+                <property name="sizeAdjustPolicy">
+                 <enum>QAbstractScrollArea::AdjustToContents</enum>
+                </property>
+                <property name="editTriggers">
+                 <set>QAbstractItemView::NoEditTriggers</set>
+                </property>
+                <property name="selectionMode">
+                 <enum>QAbstractItemView::ExtendedSelection</enum>
+                </property>
+                <property name="selectionBehavior">
+                 <enum>QAbstractItemView::SelectRows</enum>
+                </property>
+                <property name="textElideMode">
+                 <enum>Qt::ElideNone</enum>
+                </property>
+                <property name="horizontalScrollMode">
+                 <enum>QAbstractItemView::ScrollPerPixel</enum>
+                </property>
+                <attribute name="horizontalHeaderDefaultSectionSize">
+                 <number>50</number>
+                </attribute>
+                <attribute name="horizontalHeaderStretchLastSection">
+                 <bool>false</bool>
+                </attribute>
+                <attribute name="verticalHeaderVisible">
+                 <bool>false</bool>
+                </attribute>
+                <attribute name="verticalHeaderMinimumSectionSize">
+                 <number>15</number>
+                </attribute>
+                <attribute name="verticalHeaderDefaultSectionSize">
+                 <number>20</number>
+                </attribute>
+                <row>
+                 <property name="text">
+                  <string>New Row</string>
+                 </property>
+                </row>
+                <column>
+                 <property name="text">
+                  <string>Index</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>Time</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>Timestamp</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>ECUId</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>AppId</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>CtId</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>Payload</string>
+                 </property>
+                </column>
+               </widget>
+              </item>
+             </layout>
             </item>
            </layout>
+          </item>
+          <item>
+           <widget class="QProgressBar" name="progressBarSearch">
+            <property name="maximum">
+             <number>0</number>
+            </property>
+            <property name="value">
+             <number>0</number>
+            </property>
+            <property name="invertedAppearance">
+             <bool>false</bool>
+            </property>
+            <property name="format">
+             <string>%v/%m - %p%</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>

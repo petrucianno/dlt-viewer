@@ -153,7 +153,6 @@ public:
     static DltMessageFinder* getInstance(QObject *parent = nullptr);
 
     void search(QStringList &paths, const QString &&expression);
-    void search(QSharedPointer<QDirIterator> it_files, const QString &&expression);
     void cancelSearch(bool full_stop = true);
     bool isRunning()
     {
@@ -176,6 +175,7 @@ signals:
     void searchFinished();
     void foundFile(int f_index);
     void resultPartial(int f_index, int index);
+    void processedFile(QString f_name);
 };
 
 

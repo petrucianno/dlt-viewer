@@ -40,6 +40,8 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
     /* enable custom context menu */
     ui->treeWidgetResults->setContextMenuPolicy(Qt::CustomContextMenu);
 
+    /* Dont show progress bar at start */
+    ui->progressBarSearch->hide();
     /* Make connections */
     /**/
     connect(multiFileSearcher, &DltMessageFinder::startedSearch, this, [this](){
@@ -71,12 +73,15 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
             totalMatches = 0;
         }
     });
-    connect(multiFileSearcher, &DltMessageFinder::searchFinished, this, [this](){
+    connect(multiFileSearcher, &DltMessageFinder::searchFinished, this, [this](){        
         // set search button enabled
         ui->buttonSearch->setEnabled(true);
         ui->buttonCancel->setText("Close");
         /* enable textbox */
         ui->directoryTextBox->setEnabled(true);
+
+        /* hide progressbar when done */
+        ui->progressBarSearch->hide();
     });
     connect(multiFileSearcher, &DltMessageFinder::foundFile, this, [this](int index){
         /* get path from results */
@@ -143,7 +148,9 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
         ui->groupBoxSearchResult->setTitle(newTitle);
     });
 
-
+    connect(multiFileSearcher, &DltMessageFinder::processedFile, this, [this](QString){
+        ui->progressBarSearch->setValue(ui->progressBarSearch->value()+1);
+    });
 }
 
 SearchInFilesDialog::~SearchInFilesDialog()
@@ -215,6 +222,11 @@ void SearchInFilesDialog::on_buttonSearch_clicked()
 
         if (m_files.size() > 0)
         {
+            ui->progressBarSearch->reset();
+            ui->progressBarSearch->setMaximum(m_files.size());
+            ui->progressBarSearch->setValue(0);
+            ui->progressBarSearch->show();
+
             multiFileSearcher->search(m_files, std::move(expressions.join("|")));
         }
         else
@@ -229,6 +241,8 @@ void SearchInFilesDialog::on_buttonSearch_clicked()
 
 void SearchInFilesDialog::on_buttonCancel_clicked()
 {
+    ui->progressBarSearch->hide();
+
     if (multiFileSearcher->isRunning())
     {/* This will also re-enable the search button */
         multiFileSearcher->cancelSearch(false);/* Stop the search, but keep results */
@@ -236,6 +250,7 @@ void SearchInFilesDialog::on_buttonCancel_clicked()
     else
     {
         multiFileSearcher->cancelSearch(true); /* Clear cache memeory, also */
+        ui->labelResultFileName->clear();
         close();
     }
 }
@@ -374,6 +389,7 @@ void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item
     (void)column;
     auto resultsTable = ui->tableWidgetResults;
     int topLvlIndex = ui->treeWidgetResults->indexOfTopLevelItem(item);
+    std::shared_ptr<QDltFile>dltFile;
 
     /* Delete results table items */
     if (resultsTable->rowCount() > 0)
@@ -386,15 +402,15 @@ void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item
     {
         /* ToDo: Create a table with all results from the file and display it as usual */
         auto results      = multiFileSearcher->getResults().at(topLvlIndex);
-        auto dltFile      = results->first;
         auto numResults   = results->second.size();
+        dltFile           = results->first;
 
         for (int idx = 0; idx < numResults; idx++)
         {
             auto msg_idx = results->second.at(idx);
             QDltMsg message;
 
-            /* get message from file and insert it in the table */
+            /* get message from file and insert it in the table */            
             dltFile->getMsg(msg_idx, message);
             insertResultRow(resultsTable, message, idx, msg_idx);
         }
@@ -411,7 +427,7 @@ void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item
 
         auto results      = multiFileSearcher->getResults().at(topLvlIndex);
         /* Get .dlt file content for current index */
-        auto dltFile      = results->first;
+        dltFile      = results->first;
 
         QTableWidgetItem* ourItem = nullptr;
         long ourItemIndex = 0;
@@ -443,6 +459,8 @@ void SearchInFilesDialog::on_treeWidgetResults_itemClicked(QTreeWidgetItem *item
         resultsTable->scrollToItem(ourItem, QAbstractItemView::PositionAtCenter);
         resultsTable->setRangeSelected({ourItemIndex, 0, ourItemIndex, 4}, true);
     }
+
+    ui->labelResultFileName->setText(dltFile->getFileName());
 }
 
 void SearchInFilesDialog::on_treeWidgetResults_customContextMenuRequested(const QPoint &pos)

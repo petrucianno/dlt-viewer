@@ -105,6 +105,8 @@ void DltMessageFinder::shallow_search_worker()
 
         message_cnt = file->getFileMsgNumber();
 
+        emit obj->processedFile(file->getFileName());
+
         for (int i = 0; (i < message_cnt) && obj->isRunning(); i++)
         {
             QDltMsg msg;
@@ -190,6 +192,5 @@ void DltMessageFinder::depth_search_worker(){
                         .arg(QString::number(QDateTime::currentMSecsSinceEpoch()),
                              name, QString::number(result->second.size()));
 #endif
-
     obj->setWorkerState(WORKER_FINISHED);
 };
