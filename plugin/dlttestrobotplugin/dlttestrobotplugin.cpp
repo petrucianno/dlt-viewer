@@ -166,13 +166,15 @@ void DltTestRobotPlugin::updateMsg(int , QDltMsg &){
 
 void DltTestRobotPlugin::updateMsgDecoded(int , QDltMsg &msg)
 {
-    int index = filterEcuId.indexOf(msg.getEcuid());
-    if(index!=-1 && filterAppId[index]==msg.getApid() && filterCtxId[index]==msg.getCtid() && tcpSocket)
+    for(int num=0; num<filterEcuId.size(); num++)
     {
-        QString text = msg.getEcuid() + " " + msg.getApid() + " " + msg.getCtid() + " " + msg.toStringPayload();
-        qDebug() << "DltTestRobot: send message" << text;
-        text += "\n";
-        tcpSocket->write(text.toLatin1());
+        if(filterEcuId[num]==msg.getEcuid() && filterAppId[num]==msg.getApid() && filterCtxId[num]==msg.getCtid() && tcpSocket)
+        {
+            QString text = msg.getEcuid() + " " + msg.getApid() + " " + msg.getCtid() + " " + msg.toStringPayload();
+            qDebug() << "DltTestRobot: send message" << text;
+            text += "\n";
+            tcpSocket->write(text.toLatin1());
+        }
     }
 
 }
@@ -226,6 +228,54 @@ void DltTestRobotPlugin::readyRead()
                     filterCtxId.append(list[4]);
                 }
 
+            }
+            else if(list[0]=="newFile")
+            {
+                list.removeAt(0);
+                if(dltControl && !list.isEmpty())
+                    dltControl->newFile(list.join(' ').toLatin1());
+            }
+            else if(list[0]=="openFile")
+            {
+                list.removeAt(0);
+                if(dltControl && !list.isEmpty())
+                    dltControl->openFile(QStringList(list.join(' ').toLatin1()));
+            }
+            else if(list[0]=="saveAsFile")
+            {
+                list.removeAt(0);
+                if(dltControl && !list.isEmpty())
+                    dltControl->saveAsFile(list.join(' ').toLatin1());
+            }
+            else if(list[0]=="reopenFile")
+            {
+                if(dltControl)
+                    dltControl->reopenFile();
+            }
+            else if(list[0]=="clearFile")
+            {
+                if(dltControl)
+                    dltControl->clearFile();
+            }
+            else if(list[0]=="quitDltViewer")
+            {
+                if(dltControl)
+                    dltControl->quitDltViewer();
+            }
+            else if(list[0]=="marker")
+            {
+                if(dltControl)
+                    dltControl->marker();
+            }
+            else if(list[0]=="connectAllEcu")
+            {
+                if(dltControl)
+                    dltControl->connectAllEcu();
+            }
+            else if(list[0]=="disconnectAllEcu")
+            {
+                if(dltControl)
+                    dltControl->disconnectAllEcu();
             }
         }
     }
