@@ -46,6 +46,8 @@ add_executable(dlt-viewer
     dltfileindexerdefaultfilterthread.cpp
     mcudpsocket.cpp
     sortfilterproxymodel.cpp
+    dltmessagefinder.cpp
+    searchinfilesdialog.cpp
     ${UI_RESOURCES_RCC}
     resources/dlt_viewer.rc)
 
