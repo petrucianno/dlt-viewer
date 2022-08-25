@@ -186,6 +186,7 @@ void SearchInFilesDialog::on_buttonSearch_clicked()
     /* if there are some, clear previous results */
     multiFileSearcher->cancelSearch(true);
     ui->treeWidgetResults->clear();
+    ui->labelResultFileName->clear();
 
     if (!multiFileSearcher->isRunning())
     {
