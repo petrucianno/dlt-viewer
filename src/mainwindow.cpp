@@ -326,7 +326,10 @@ void MainWindow::initView()
     QFileSystemModel *model = new QFileSystemModel;
 
     model->setNameFilterDisables(false);
-    model->setNameFilters(QStringList() << "*.dlt" << "*.dlf" << "*.dlp");
+
+    auto archiveFileFormats = QStringList() << "*.zip" << "*.rar" << "*.tar";
+
+    model->setNameFilters(QStringList() << "*.dlt" << "*.dlf" << "*.dlp" << archiveFileFormats);
     model->setRootPath(QDir::rootPath());
 
     /* sort dir entries */
