@@ -327,8 +327,6 @@ void MainWindow::initView()
 
     model->setNameFilterDisables(false);
 
-    auto archiveFileFormats = QStringList() << "*.zip" << "*.rar" << "*.tar";
-
     model->setNameFilters(QStringList() << "*.dlt" << "*.dlf" << "*.dlp" << archiveFileFormats);
     model->setRootPath(QDir::rootPath());
 
@@ -480,12 +478,14 @@ void MainWindow::initSignalConnections()
     connect(ui->tableView->selectionModel(),  &QItemSelectionModel::selectionChanged, this, &MainWindow::onTableViewSelectionChanged);
 
     // connect file loaded signal with  explorerView
-    connect(this, &MainWindow::dltFileLoaded, this, [this](const QStringList& paths){
+    connect(this, &MainWindow::dltFileLoaded, this, [this](const QStringList& ){
         QSortFilterProxyModel*   proxyModel = reinterpret_cast<QSortFilterProxyModel*>(ui->exploreView->model());
         QFileSystemModel*        fsModel    = reinterpret_cast<QFileSystemModel*>(proxyModel->sourceModel());
         ui->exploreView->scrollTo(
                     proxyModel->mapFromSource(fsModel->index(recentFiles[0])));
     });
+
+    connect(ui->exploreView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MainWindow::onExploreViewSelectionChanged);
 }
 
 void MainWindow::initSearchTable()
@@ -7783,3 +7783,43 @@ void MainWindow::on_comboBoxExplorerSortOrder_currentIndexChanged(int index)
     }
 }
 
+void MainWindow::onExploreViewSelectionChanged(const QItemSelection & selected, const QItemSelection & deselected)
+{
+    QModelIndexList selectedIndex   = selected.indexes();
+    QModelIndexList deselectedIndex = deselected.indexes();
+    QModelIndexList selectedRows    = ui->exploreView->selectionModel()->selectedRows();
+
+    QString deselectedPath = "";
+
+    if (deselectedIndex.size() > 0)
+    {
+        deselectedPath = getPathFromExplorerViewIndexModel(deselectedIndex[0]);
+    }
+
+    if ("" == exploreViewFirstSelected)
+        exploreViewFirstSelected = getPathFromExplorerViewIndexModel(selectedRows[0]);
+    else if (selectedRows.size() == 1)
+        exploreViewFirstSelected = getPathFromExplorerViewIndexModel(selectedRows[0]);
+    else if (exploreViewFirstSelected == deselectedPath)
+    {
+        exploreViewFirstSelected = "";
+        if (selectedRows.size() > 0)
+            exploreViewFirstSelected = getPathFromExplorerViewIndexModel(selectedRows[0]);
+    }
+
+    if (selectedRows.size() >= 2)
+    {
+        bool firstIsFile   = !QDir(exploreViewFirstSelected).exists();
+
+        for (auto &row : selectedRows)
+        {
+            bool currIsFile = !QDir(getPathFromExplorerViewIndexModel(row)).exists();
+
+            if (currIsFile != firstIsFile)
+            {
+                ui->exploreView->selectionModel()->
+                        select(row, QItemSelectionModel::Deselect);
+            }
+        }
+    }
+}

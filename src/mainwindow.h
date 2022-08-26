@@ -240,6 +240,9 @@ private:
     /**/
     SortFilterProxyModel *sortProxyModel;
 
+    const QStringList archiveFileFormats = {"*.zip", "*.rar", "*.tar"};
+    QString exploreViewFirstSelected;
+
     /* functions called in constructor */
     void initState();
     void initView();
@@ -401,6 +404,7 @@ private slots:
 
     void onTableViewSelectionChanged(const QItemSelection & selected, const QItemSelection & deselected);
     void onSearchresultsTableSelectionChanged(const QItemSelection & selected, const QItemSelection & deselected);
+    void onExploreViewSelectionChanged(const QItemSelection & selected, const QItemSelection & );
 
     void on_tableView_customContextMenuRequested(QPoint pos);
     void on_tableView_SearchIndex_customContextMenuRequested(QPoint pos);
