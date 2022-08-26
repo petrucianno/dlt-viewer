@@ -7783,9 +7783,8 @@ void MainWindow::on_comboBoxExplorerSortOrder_currentIndexChanged(int index)
     }
 }
 
-void MainWindow::onExploreViewSelectionChanged(const QItemSelection & selected, const QItemSelection & deselected)
+void MainWindow::onExploreViewSelectionChanged(const QItemSelection &, const QItemSelection & deselected)
 {
-    QModelIndexList selectedIndex   = selected.indexes();
     QModelIndexList deselectedIndex = deselected.indexes();
     QModelIndexList selectedRows    = ui->exploreView->selectionModel()->selectedRows();
 
