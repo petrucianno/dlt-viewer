@@ -25,6 +25,8 @@ class SearchInFilesDialog : public QDialog
     QMutex               m_indexingMutex;
     long                 totalMatches = 0;
 
+    QStringList getQueryPatterns();
+
 public:
     explicit SearchInFilesDialog(QWidget *parent = nullptr);
     ~SearchInFilesDialog();
@@ -57,7 +59,7 @@ private slots:
 
     void on_pushButtonDeselectAll_clicked();
 
-    void on_pushButtonOpenSelected_clicked();
+    void on_comboBoxSelectedResults_activated(int index);
 
 protected:
     void closeEvent(QCloseEvent *event) override

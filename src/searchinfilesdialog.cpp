@@ -5,6 +5,9 @@
 #include <QAction>
 #include <QMessageBox>
 #include <QDateTime>
+#include <QStandardItemModel>
+#include <QFileDialog>
+#include <QClipboard>
 
 #include "ui_searchinfilesdialog.h"
 #include "searchinfilesdialog.h"
@@ -65,7 +68,6 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
 
             ui->pushButtonDeselectAll->setEnabled(false);
             ui->pushButtonSelectAll->setEnabled(false);
-            ui->pushButtonOpenSelected->setEnabled(false);
 
             ui->treeWidgetResults->clear();
             ui->tableWidgetResults->setRowCount(0);
@@ -112,7 +114,6 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
         {
             ui->pushButtonDeselectAll->setEnabled(true);
             ui->pushButtonSelectAll->setEnabled(true);
-            ui->pushButtonOpenSelected->setEnabled(true);
         }
 
         ui->treeWidgetResults->insertTopLevelItem(
@@ -151,6 +152,8 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
     connect(multiFileSearcher, &DltMessageFinder::processedFile, this, [this](QString){
         ui->progressBarSearch->setValue(ui->progressBarSearch->value()+1);
     });
+
+    qobject_cast<QStandardItemModel*>(ui->comboBoxSelectedResults->model())->item(0)->setEnabled(false);
 }
 
 SearchInFilesDialog::~SearchInFilesDialog()
@@ -175,6 +178,35 @@ void SearchInFilesDialog::dltFilesOpened(const QStringList &files)
 (void)files;
 }
 
+QStringList SearchInFilesDialog::getQueryPatterns()
+{
+    QStringList expressions;
+    QTableWidget  *table = ui->tableWidgetPatterns;
+
+    /* Compose search query based on Patterns Table */
+    for (int i = 0; i < table->rowCount(); i++)
+    {
+        /* Check if query is enabled */
+        bool is_enabled = dynamic_cast<QCheckBox*>(table->cellWidget(i, 0))->isChecked();
+
+        if (is_enabled)
+        {
+            ;
+            auto text = table->item(i, 1)->text();
+            if (!text.isEmpty())
+            {
+                /* test if regex expression is valid */
+                expressions << ("("+text+")");
+            }
+            else
+                qDebug() << "empty";
+        }
+
+    }
+
+    return expressions;
+}
+
 void SearchInFilesDialog::on_buttonSearch_clicked()
 {
     if (!QDir(m_currentPath).exists())
@@ -191,29 +223,7 @@ void SearchInFilesDialog::on_buttonSearch_clicked()
     if (!multiFileSearcher->isRunning())
     {
         QDltFilterList filters;
-        QTableWidget  *table = ui->tableWidgetPatterns;
-        QStringList    expressions;
-
-        /* Compose search query based on Patterns Table */
-        for (int i = 0; i < table->rowCount(); i++)
-        {
-            /* Check if query is enabled */
-            bool is_enabled = dynamic_cast<QCheckBox*>(table->cellWidget(i, 0))->isChecked();
-
-            if (is_enabled)
-            {
-                ;
-                auto text = table->item(i, 1)->text();
-                if (!text.isEmpty())
-                {
-                    /* test if regex expression is valid */
-                    expressions << ("("+text+")");
-                }
-                else
-                    qDebug() << "empty";
-            }
-
-        }
+        QStringList    expressions = getQueryPatterns();
 
         if (expressions.empty())
         {
@@ -515,22 +525,136 @@ void SearchInFilesDialog::on_pushButtonDeselectAll_clicked()
     }
 }
 
-void SearchInFilesDialog::on_pushButtonOpenSelected_clicked()
+void SearchInFilesDialog::on_comboBoxSelectedResults_activated(int index)
 {
     auto resultsTree = ui->treeWidgetResults;
     int  items_cnt = resultsTree->topLevelItemCount();
-    QStringList files;
 
-    for (int i = 0; i < items_cnt; i++)
+    ui->comboBoxSelectedResults->setCurrentIndex(0);
+
+    switch (index)
     {
-        auto results = multiFileSearcher->getResults().at(i);
-        auto dltFile = results->first->getFileName();
+    case 1: /* Load files */
+    {
+        QStringList files;
 
-        if (Qt::Checked == resultsTree->topLevelItem(i)->checkState(0))
+        for (int i = 0; i < items_cnt; i++)
         {
-            files << dltFile;
-        }
-    }
+            auto results = multiFileSearcher->getResults().at(i);
+            auto dltFile = results->first->getFileName();
 
-    emit openDltFiles(files);
+            if (Qt::Checked == resultsTree->topLevelItem(i)->checkState(0))
+            {
+                files << dltFile;
+            }
+        }
+
+        if (files.size() > 0)
+        {
+            emit openDltFiles(files);
+        }
+
+        break;
+    }
+    case 2: /* Save results */
+    {
+        QString fileName = QFileDialog::getSaveFileName(this, "Save results to file", m_currentPath);
+
+        if (fileName != "")
+        {
+            QFile file(QFileInfo(fileName).absoluteFilePath());
+
+            if (!file.open(QIODevice::WriteOnly))
+            {
+                QMessageBox::critical(this, tr("Error"), tr("Failed to save file"));
+            }
+            else
+            {
+                QTextStream outputText(&file);
+
+                QString blockSeparator = QString("\n%1\n").arg(QString("-").repeated(100));
+
+                outputText << QString("Search results\n\nBase folder: %1\nPattern: %2\n\n")
+                                .arg(QDir::toNativeSeparators(m_currentPath), getQueryPatterns().join("|"));
+
+                for (int i = 0; i < items_cnt; i++)
+                {
+                    auto results = multiFileSearcher->getResults().at(i);
+                    auto dltFile = results->first;
+
+                    if (Qt::Checked == resultsTree->topLevelItem(i)->checkState(0))
+                    {
+                        outputText << QString("File - %1:%2")
+                                .arg(QDir::toNativeSeparators(dltFile->getFileName()),
+                                     blockSeparator);
+
+                        for (int i = 0; i < results->second.size(); i++)
+                        {
+                            int idx = results->second.at(i);
+                            QDltMsg message;
+
+                            dltFile->getMsg(idx, message);
+                            outputText << QString("%1 %2 - %3\n").arg(idx)
+                                          .arg(message.toStringHeader(),
+                                               message.toStringPayload().replace("\n" ,"  "));
+                        }
+
+                        outputText << QString("%1\n").arg(blockSeparator);
+                    }
+                }
+
+                file.close();
+                QMessageBox::information(this, "Saving done!", "The results were successfully saved");
+            }
+        }
+
+        break;
+    }
+    case 3: /* Search again */
+    {
+        QStringList files;
+
+        for (int i = 0; i < items_cnt; i++)
+        {
+            auto results = multiFileSearcher->getResults().at(i);
+            auto dltFile = results->first->getFileName();
+
+            if (Qt::Checked == resultsTree->topLevelItem(i)->checkState(0))
+            {
+                files << dltFile;
+            }
+        }
+
+        if (files.size() > 0)
+        {
+            m_files = files;
+            on_buttonSearch_clicked();
+        }
+
+        break;
+    }
+    case 4: /* Copy paths */
+    {
+        QClipboard *clipboard = QGuiApplication::clipboard();
+        QStringList files;
+
+        for (int i = 0; i < items_cnt; i++)
+        {
+            auto results = multiFileSearcher->getResults().at(i);
+            auto dltFile = results->first->getFileName();
+
+            if (Qt::Checked == resultsTree->topLevelItem(i)->checkState(0))
+            {
+                files << dltFile;
+            }
+        }
+
+        clipboard->setText(files.join("\n"));
+
+        break;
+    }
+    default:
+        break;
+    }
 }
+
