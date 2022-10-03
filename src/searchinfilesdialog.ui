@@ -230,13 +230,32 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="pushButtonOpenSelected">
-                  <property name="enabled">
-                   <bool>false</bool>
-                  </property>
-                  <property name="text">
-                   <string>Open Selected</string>
-                  </property>
+                 <widget class="QComboBox" name="comboBoxSelectedResults">
+                  <item>
+                   <property name="text">
+                    <string>-- Selected --</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string notr="true">Load files</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>Save results</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>Search again</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string notr="true">Copy paths</string>
+                   </property>
+                  </item>
                  </widget>
                 </item>
                </layout>
