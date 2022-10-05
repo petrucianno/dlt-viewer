@@ -81,7 +81,7 @@
       <bool>true</bool>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tabSearch">
       <attribute name="title">
@@ -90,6 +90,9 @@
       <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1">
        <item>
         <widget class="QGroupBox" name="groupBox_2">
+         <property name="acceptDrops">
+          <bool>false</bool>
+         </property>
          <property name="title">
           <string>Patterns to search:</string>
          </property>
@@ -132,6 +135,9 @@
              <layout class="QVBoxLayout" name="verticalLayout_4">
               <item>
                <widget class="QPushButton" name="buttonAddPattern">
+                <property name="toolTip">
+                 <string>Add pattern</string>
+                </property>
                 <property name="text">
                  <string>&amp;Add</string>
                 </property>
@@ -143,12 +149,42 @@
               </item>
               <item>
                <widget class="QPushButton" name="buttonRemovePattern">
+                <property name="toolTip">
+                 <string>Remove selected pattern</string>
+                </property>
                 <property name="text">
                  <string>&amp;Remove</string>
                 </property>
                 <property name="icon">
                  <iconset theme="list-remove">
                   <normaloff>.</normaloff>.</iconset>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="Line" name="line">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton">
+                <property name="toolTip">
+                 <string>Load configuration from file</string>
+                </property>
+                <property name="text">
+                 <string>Load</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButtonSaveConfig">
+                <property name="toolTip">
+                 <string>Save current configuration to a file</string>
+                </property>
+                <property name="text">
+                 <string>Save</string>
                 </property>
                </widget>
               </item>

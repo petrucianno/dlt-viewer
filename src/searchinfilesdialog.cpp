@@ -574,8 +574,8 @@ void SearchInFilesDialog::on_comboBoxSelectedResults_activated(int index)
 
                 QString blockSeparator = QString("\n%1\n").arg(QString("-").repeated(100));
 
-                outputText << QString("Search results\n\nBase folder: %1\nPattern: %2\n\n")
-                                .arg(QDir::toNativeSeparators(m_currentPath), getQueryPatterns().join("|"));
+                outputText << QString("Search results\n\nBase folder: %1\nPatterns:\n%2\n\n")
+                                .arg(QDir::toNativeSeparators(m_currentPath), getQueryPatterns().join("\n"));
 
                 for (int i = 0; i < items_cnt; i++)
                 {
