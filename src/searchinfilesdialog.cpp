@@ -8,6 +8,7 @@
 #include <QStandardItemModel>
 #include <QFileDialog>
 #include <QClipboard>
+#include <QSettings>
 
 #include "ui_searchinfilesdialog.h"
 #include "searchinfilesdialog.h"
@@ -46,7 +47,13 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
     /* Dont show progress bar at start */
     ui->progressBarSearch->hide();
     /* Make connections */
-    /**/
+    initConnections();
+
+    qobject_cast<QStandardItemModel*>(ui->comboBoxSelectedResults->model())->item(0)->setEnabled(false);
+}
+
+void SearchInFilesDialog::initConnections()
+{
     connect(multiFileSearcher, &DltMessageFinder::startedSearch, this, [this](){
         // set search button disabled
         ui->buttonSearch->setEnabled(false);
@@ -55,6 +62,7 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
         ui->directoryTextBox->setEnabled(false);
         ui->tabWidget->setCurrentIndex(1);
     });
+
     connect(multiFileSearcher, &DltMessageFinder::stoppedSearch, this, [this](bool full_stop){
         // set search button enabled
         ui->buttonCancel->setText("Close");
@@ -75,7 +83,8 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
             totalMatches = 0;
         }
     });
-    connect(multiFileSearcher, &DltMessageFinder::searchFinished, this, [this](){        
+
+    connect(multiFileSearcher, &DltMessageFinder::searchFinished, this, [this](){
         // set search button enabled
         ui->buttonSearch->setEnabled(true);
         ui->buttonCancel->setText("Close");
@@ -85,6 +94,7 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
         /* hide progressbar when done */
         ui->progressBarSearch->hide();
     });
+
     connect(multiFileSearcher, &DltMessageFinder::foundFile, this, [this](int index){
         /* get path from results */
         /*
@@ -123,6 +133,7 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
                 .arg(ui->treeWidgetResults->topLevelItemCount());
         ui->groupBoxSearchResult->setTitle(newTitle);
     });
+
     connect(multiFileSearcher, &DltMessageFinder::resultPartial, this, [this](int f_index, int index){
 #if 0
         qDebug() << QString("[%1] + parent: %2 child: %3")
@@ -152,8 +163,6 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
     connect(multiFileSearcher, &DltMessageFinder::processedFile, this, [this](QString){
         ui->progressBarSearch->setValue(ui->progressBarSearch->value()+1);
     });
-
-    qobject_cast<QStandardItemModel*>(ui->comboBoxSelectedResults->model())->item(0)->setEnabled(false);
 }
 
 SearchInFilesDialog::~SearchInFilesDialog()

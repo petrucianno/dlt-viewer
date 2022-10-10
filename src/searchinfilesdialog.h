@@ -27,6 +27,8 @@ class SearchInFilesDialog : public QDialog
 
     QStringList getQueryPatterns();
 
+    void initConnections();
+
 public:
     explicit SearchInFilesDialog(QWidget *parent = nullptr);
     ~SearchInFilesDialog();
