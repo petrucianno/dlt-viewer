@@ -567,7 +567,7 @@ void SearchInFilesDialog::on_comboBoxSelectedResults_activated(int index)
     }
     case 2: /* Save results */
     {
-        QString fileName = QFileDialog::getSaveFileName(this, "Save results to file", m_currentPath);
+        QString fileName = QFileDialog::getSaveFileName(this, "Save results to file", m_currentPath, "*.txt");
 
         if (fileName != "")
         {
@@ -664,6 +664,69 @@ void SearchInFilesDialog::on_comboBoxSelectedResults_activated(int index)
     }
     default:
         break;
+    }
+}
+
+void SearchInFilesDialog::on_pushButtonLoadConfig_clicked()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, "Open patterns", m_currentPath, "Patterns (*.ini)");
+
+    if (fileName != "")
+    {
+        QSettings settings(fileName, QSettings::IniFormat);
+        QStringList patterns;
+
+        int size = settings.beginReadArray("patterns");
+        for (int i = 0; i < size; ++i)
+        {
+            settings.setArrayIndex(i);
+            patterns.append(settings.value("patterns").toString());
+        }
+        settings.endArray();
+
+        if (patterns.size() <= 0)
+        {
+            qDebug() << "Invalid patterns config file";
+        }
+        else
+        {
+            /* clear patterns from table */
+            ui->tableWidgetPatterns->clearContents();
+            ui->tableWidgetPatterns->setRowCount(0);
+
+            /* Write patterns to table */
+            for (int row = 0; row  < patterns.size(); row++)
+            {
+                QTableWidgetItem *item = new QTableWidgetItem(patterns.at(row));
+
+                /* insert new row */
+                on_buttonAddPattern_clicked();
+                /*write the pattern value*/
+                ui->tableWidgetPatterns->setItem(row, 1, item);
+            }
+        }
+    }
+}
+
+
+void SearchInFilesDialog::on_pushButtonSaveConfig_clicked()
+{
+    QString fileName = QFileDialog::getSaveFileName(this, "Save patterns", m_currentPath, "Patterns (*.ini)");
+
+    if (fileName != "")
+    {
+        QSettings settings(fileName, QSettings::IniFormat);
+
+        auto patterns = getQueryPatterns();
+        settings.beginWriteArray("patterns");
+        for (int i = 0; i < patterns.size(); ++i) {
+            QString pattern = patterns.at(i);
+            pattern = pattern.mid(1, pattern.size() - 2);
+
+            settings.setArrayIndex(i);
+            settings.setValue("patterns", pattern);
+        }
+        settings.endArray();
     }
 }
 

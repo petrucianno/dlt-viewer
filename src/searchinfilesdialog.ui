@@ -169,14 +169,21 @@
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="pushButton">
-                <property name="toolTip">
-                 <string>Load configuration from file</string>
+               <layout class="QHBoxLayout" name="horizontalLayout_6">
+                <property name="topMargin">
+                 <number>0</number>
                 </property>
-                <property name="text">
-                 <string>Load</string>
-                </property>
-               </widget>
+                <item>
+                 <widget class="QPushButton" name="pushButtonLoadConfig">
+                  <property name="toolTip">
+                   <string>Load configuration from file</string>
+                  </property>
+                  <property name="text">
+                   <string>Load</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
               <item>
                <widget class="QPushButton" name="pushButtonSaveConfig">

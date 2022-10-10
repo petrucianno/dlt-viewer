@@ -63,6 +63,10 @@ private slots:
 
     void on_comboBoxSelectedResults_activated(int index);
 
+    void on_pushButtonLoadConfig_clicked();
+
+    void on_pushButtonSaveConfig_clicked();
+
 protected:
     void closeEvent(QCloseEvent *event) override
     {
