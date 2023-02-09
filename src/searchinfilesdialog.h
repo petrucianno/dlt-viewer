@@ -29,6 +29,8 @@ class SearchInFilesDialog : public QDialog
 
     void initConnections();
 
+    void on_pushButtonLoadConfig_clicked(bool replace = true);
+
 public:
     explicit SearchInFilesDialog(QWidget *parent = nullptr);
     ~SearchInFilesDialog();
@@ -62,8 +64,6 @@ private slots:
     void on_pushButtonDeselectAll_clicked();
 
     void on_comboBoxSelectedResults_activated(int index);
-
-    void on_pushButtonLoadConfig_clicked();
 
     void on_pushButtonSaveConfig_clicked();
 

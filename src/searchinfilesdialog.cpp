@@ -46,9 +46,21 @@ SearchInFilesDialog::SearchInFilesDialog(QWidget *parent) :
 
     /* Dont show progress bar at start */
     ui->progressBarSearch->hide();
+
+    QMenu* menu = new QMenu(this);
+    menu->addAction(tr("Replace"), [this](){
+        on_pushButtonLoadConfig_clicked(true);
+    });
+    menu->addAction(tr("Append"), [this](){
+        on_pushButtonLoadConfig_clicked(false);
+    });
+
+    ui->pushButtonLoadConfig->setMenu(menu);
+
     /* Make connections */
     initConnections();
 
+    /* Disable selection for first item in dropdown menu */
     qobject_cast<QStandardItemModel*>(ui->comboBoxSelectedResults->model())->item(0)->setEnabled(false);
 }
 
@@ -667,7 +679,7 @@ void SearchInFilesDialog::on_comboBoxSelectedResults_activated(int index)
     }
 }
 
-void SearchInFilesDialog::on_pushButtonLoadConfig_clicked()
+void SearchInFilesDialog::on_pushButtonLoadConfig_clicked(bool replace)
 {
     QString fileName = QFileDialog::getOpenFileName(this, "Open patterns", m_currentPath, "Patterns (*.ini)");
 
@@ -690,19 +702,22 @@ void SearchInFilesDialog::on_pushButtonLoadConfig_clicked()
         }
         else
         {
-            /* clear patterns from table */
-            ui->tableWidgetPatterns->clearContents();
-            ui->tableWidgetPatterns->setRowCount(0);
+            if (replace)
+            {
+                /* clear patterns from table */
+                ui->tableWidgetPatterns->clearContents();
+                ui->tableWidgetPatterns->setRowCount(0);
+            }
 
             /* Write patterns to table */
-            for (int row = 0; row  < patterns.size(); row++)
+            for (auto &pattern : patterns)
             {
-                QTableWidgetItem *item = new QTableWidgetItem(patterns.at(row));
+                QTableWidgetItem *item = new QTableWidgetItem(pattern);
 
                 /* insert new row */
                 on_buttonAddPattern_clicked();
                 /*write the pattern value*/
-                ui->tableWidgetPatterns->setItem(row, 1, item);
+                ui->tableWidgetPatterns->setItem(ui->tableWidgetPatterns->rowCount()-1, 1, item);
             }
         }
     }
